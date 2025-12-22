@@ -851,6 +851,8 @@
 
         // --- 6. AI Assistant Mock ---
         const aiAssistant = {
+             // --- 6. AI Assistant (Real Gemini Integration) ---
+        const aiAssistant = {
             overlay: document.getElementById('ai-overlay'),
             input: document.getElementById('ai-input'),
             responseArea: document.getElementById('ai-response-area'),
@@ -860,6 +862,7 @@
                 setTimeout(() => this.overlay.classList.add('active-view'), 10);
                 this.input.value = '';
                 this.responseArea.classList.add('hidden');
+                this.input.focus();
             },
             close() {
                 this.overlay.classList.remove('active-view');
@@ -869,26 +872,69 @@
                 const query = this.input.value;
                 if (!query) return;
                 
-                this.responseArea.innerText = "Thinking...";
+                // UI: Show loading
+                this.responseArea.innerText = "Gemini is thinking...";
                 this.responseArea.classList.remove('hidden');
                 
-                // Simulate API delay
-                setTimeout(() => {
-                    this.responseArea.innerHTML = `
-                        <strong>Gemini Suggestion:</strong><br>
-                        I've analyzed your schedule. Based on "${query}", 
-                        I suggest a slot at <strong>14:00 today</strong>.
-                        <br><br>
-                        <em>Creating event draft...</em>
+                try {
+                    // 1. 準備資料：把目前的行程轉成文字給 AI 看
+                    const todayStr = app.selectedDate.toDateString();
+                    const events = Store.getEvents(app.selectedDate);
+                    const scheduleContext = events.map(e => 
+                        `- ${e.title}: ${new Date(e.start).toLocaleTimeString()} to ${new Date(e.end).toLocaleTimeString()}`
+                    ).join('\n');
+
+                    // 2. 組合 Prompt
+                    const prompt = `
+                    You are a smart calendar assistant.
+                    Current Date: ${todayStr}
+                    Current Schedule:
+                    ${scheduleContext || "No events today."}
+
+                    User Request: "${query}"
+
+                    Task:
+                    1. Suggest a specific time slot for this request.
+                    2. Return ONLY a JSON object (no markdown).
+                    Format: { "title": "Suggested Title", "startHour": 14, "reason": "Reason for suggestion" }
                     `;
-                    // Auto open event modal after suggestion
-                    setTimeout(() => {
-                        this.close();
-                        EventModal.open(app.selectedDate, 14);
-                        EventModal.titleInput.value = query;
-                    }, 2000);
-                }, 1500);
+
+                    // 3. 呼叫 Gemini API
+                    const result = await model.generateContent(prompt);
+                    const responseText = result.response.text();
+
+                    // 4. 解析 JSON (簡單處理)
+                    // 這裡為了保險，我們嘗試用 Regex 抓出 JSON 部分
+                    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        const suggestion = JSON.parse(jsonMatch[0]);
+                        
+                        this.responseArea.innerHTML = `
+                            <strong>Suggestion:</strong> ${suggestion.reason}<br>
+                            <em>Opening event editor...</em>
+                        `;
+
+                        // 2秒後自動打開編輯視窗
+                        setTimeout(() => {
+                            this.close();
+                            // 打開 Event Modal 並帶入建議的時間與標題
+                            EventModal.open(app.selectedDate, suggestion.startHour);
+                            EventModal.titleInput.value = suggestion.title;
+                        }, 1500);
+
+                    } else {
+                        // 如果 AI 回答的不是 JSON，就直接顯示文字
+                        this.responseArea.innerText = responseText;
+                    }
+
+                } catch (error) {
+                    console.error(error);
+                    this.responseArea.innerText = "Error: " + error.message;
+                }
             }
+        };
+        document.getElementById('ai-submit').onclick = () => aiAssistant.submit();
+            
         };
         document.getElementById('ai-submit').onclick = () => aiAssistant.submit();
 
@@ -900,3 +946,4 @@
     </script>
 </body>
 </html>
+
