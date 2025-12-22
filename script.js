@@ -31,4 +31,5 @@ window.sendMessage = async function() {
     
     // 捲動到底部
     historyDiv.scrollTop = historyDiv.scrollHeight;
+
 }
