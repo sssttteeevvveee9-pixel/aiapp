@@ -1,34 +1,902 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的 AI 助理</title>
     <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <title>Deep Dark Calendar</title>
     <style>
-        body { font-family: -apple-system, sans-serif; padding: 20px; background: #f0f0f5; height: 100vh; display: flex; flex-direction: column; margin: 0; box-sizing: border-box; }
-        #chat-history { flex: 1; overflow-y: auto; background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .message { margin-bottom: 10px; padding: 10px; border-radius: 8px; max-width: 80%; }
-        .user { background: #007aff; color: white; align-self: flex-end; margin-left: auto; }
-        .ai { background: #e5e5ea; color: black; align-self: flex-start; }
-        .input-area { display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border-radius: 20px; border: 1px solid #ccc; font-size: 16px; }
-        button { padding: 10px 20px; background: #007aff; color: white; border: none; border-radius: 20px; font-weight: bold; }
+        :root {
+            --bg-color: #000000;
+            --surface-color: #1c1c1e;
+            --text-primary: #ffffff;
+            --text-secondary: #8e8e93;
+            --accent-red: #ff3b30;
+            --accent-blue: #0a84ff;
+            --accent-green: #30d158;
+            --accent-purple: #bf5af2;
+            --glass-bg: rgba(28, 28, 30, 0.85);
+            --border-radius: 16px;
+            --safe-top: env(safe-area-inset-top, 20px);
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+        .glass { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .flex-center { display: flex; justify-content: center; align-items: center; }
+        .full-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        /* Header */
+        header {
+            position: fixed; top: 0; left: 0; right: 0; height: calc(50px + var(--safe-top));
+            padding-top: var(--safe-top); display: flex; justify-content: space-between; align-items: center;
+            padding-left: 16px; padding-right: 16px; z-index: 100; border-bottom: 0.5px solid rgba(255,255,255,0.1);
+        }
+        .nav-btn { font-size: 1.2rem; color: var(--accent-blue); cursor: pointer; padding: 8px; }
+        .title { font-weight: 600; font-size: 1.1rem; }
+
+        /* Views Container */
+        #main-container { position: relative; width: 100%; height: 100%; padding-top: calc(50px + var(--safe-top)); }
+        
+        /* Animations */
+        .view { position: absolute; width: 100%; height: 100%; top: 0; left: 0; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease; background: var(--bg-color); padding-top: calc(50px + var(--safe-top)); }
+        .slide-in-right { transform: translateX(100%); }
+        .slide-out-left { transform: translateX(-100%); }
+        .active-view { transform: translateX(0); opacity: 1; z-index: 10; }
+
+        /* Month View */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 10px; }
+        .weekday-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--text-secondary); font-size: 0.8rem; padding: 10px 10px 0; }
+        .day-cell { height: 13vh; display: flex; flex-direction: column; align-items: center; border-radius: 8px; position: relative; }
+        .day-cell.today .day-number { background: var(--accent-red); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+        .day-number { font-size: 1.1rem; margin-top: 6px; font-weight: 500; }
+        .dots-container { display: flex; gap: 3px; margin-top: 6px; }
+        .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+        /* Week View */
+        .week-container { display: flex; height: calc(100vh - 60px - var(--safe-top) - var(--safe-bottom)); overflow: hidden; }
+        .time-axis { width: 40px; border-right: 0.5px solid rgba(255,255,255,0.1); font-size: 0.7rem; color: var(--text-secondary); display: flex; flex-direction: column; justify-content: space-between; padding-bottom: 10px; }
+        .time-label { text-align: right; padding-right: 5px; height: 0; transform: translateY(-50%); }
+        .week-grid { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); position: relative; }
+        .week-col { border-right: 0.5px solid rgba(255,255,255,0.05); position: relative; height: 100%; }
+        .week-event-bar { position: absolute; width: 90%; left: 5%; border-radius: 4px; opacity: 0.8; }
+
+        /* Day View */
+        .day-sticky-header { display: flex; justify-content: space-around; padding: 10px 0; background: var(--bg-color); z-index: 20; border-bottom: 0.5px solid rgba(255,255,255,0.1); }
+        .day-tab { padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; color: var(--text-secondary); transition: 0.2s; text-align: center; }
+        .day-tab.active { background: var(--surface-color); color: var(--text-primary); box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .day-tab span { display: block; font-size: 0.75rem; }
+        .day-tab strong { font-size: 1.1rem; }
+        
+        #day-scroll-area { overflow-y: auto; height: calc(100vh - 120px - var(--safe-top)); position: relative; touch-action: pan-y pinch-zoom; }
+        .day-timeline { position: relative; width: 100%; height: var(--total-height, 1440px); /* Default 60px per hour */ }
+        .hour-marker { position: absolute; width: 100%; border-top: 0.5px solid rgba(255,255,255,0.1); color: var(--text-secondary); font-size: 0.8rem; padding-left: 10px; }
+        .day-event-block { 
+            position: absolute; left: 60px; right: 10px; border-radius: 8px; padding: 8px; 
+            overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.1s linear, box-shadow 0.2s;
+        }
+        .day-event-block.swiped { transform: translateX(-120px); }
+        .day-event-block.reminder-active { border: 2px solid white; animation: pulse 2s infinite; }
+        .event-actions { position: absolute; top: 0; right: -120px; width: 120px; height: 100%; display: flex; }
+        .action-btn { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .btn-edit { background: var(--accent-blue); }
+        .btn-delete { background: var(--accent-red); }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); } }
+
+        /* Sidebar Settings */
+        #sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 70%; max-width: 300px; background: var(--surface-color); z-index: 200; transform: translateX(-100%); transition: transform 0.3s ease; padding: 20px; padding-top: calc(50px + var(--safe-top)); border-right: 1px solid rgba(255,255,255,0.1); }
+        #sidebar.open { transform: translateX(0); }
+        .sidebar-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 199; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+        .setting-item { margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; }
+        .setting-label { font-size: 1rem; margin-bottom: 10px; display: block; }
+        
+        /* Event Modal */
+        .modal { position: fixed; bottom: 0; left: 0; width: 100%; height: auto; border-top-left-radius: 20px; border-top-right-radius: 20px; z-index: 300; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); padding: 20px; padding-bottom: var(--safe-bottom); display: flex; flex-direction: column; gap: 15px; }
+        .modal.open { transform: translateY(0); }
+        .modal-input { background: rgba(255,255,255,0.1); border: none; padding: 15px; border-radius: 12px; color: white; font-size: 1.1rem; width: 100%; outline: none; }
+        .modal-row { display: flex; gap: 10px; align-items: center; }
+        .chip { padding: 10px 15px; background: rgba(255,255,255,0.1); border-radius: 20px; font-size: 0.9rem; }
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; }
+        .color-dot.selected { border-color: white; }
+        
+        /* Custom Clock Picker */
+        .clock-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 400; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .clock-overlay.open { opacity: 1; pointer-events: auto; }
+        .clock-face { width: 280px; height: 280px; background: var(--surface-color); border-radius: 50%; position: relative; margin: 20px; }
+        .clock-number { position: absolute; width: 30px; height: 30px; text-align: center; line-height: 30px; font-size: 1.1rem; color: white; transform: translate(-50%, -50%); }
+        .clock-hand { position: absolute; top: 50%; left: 50%; height: 2px; background: var(--accent-blue); transform-origin: left center; pointer-events: none; }
+        .clock-hand-tip { position: absolute; right: -15px; top: -14px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--accent-blue); background: transparent; }
+        .clock-center { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: var(--accent-blue); border-radius: 50%; transform: translate(-50%, -50%); }
+
+        /* Gemini AI Button */
+        #ai-btn { position: fixed; bottom: calc(20px + var(--safe-bottom)); right: 20px; width: 50px; height: 50px; border-radius: 14px; background: linear-gradient(135deg, #2980b9, #8e44ad); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 90; }
+        #ai-overlay { background: var(--bg-color); z-index: 500; padding: 20px; display: flex; flex-direction: column; }
+        #ai-input { flex: 1; background: transparent; border: none; color: white; font-size: 1.5rem; resize: none; margin-top: 60px; outline: none; }
+        .ai-response { margin-top: 20px; padding: 15px; background: var(--surface-color); border-radius: 12px; font-size: 1rem; color: #d1d1d6; }
+
     </style>
 </head>
 <body>
-    <div id="chat-history"></div>
-    <div class="input-area">
-        <input type="text" id="user-input" placeholder="輸入訊息...">
-        <button onclick="sendMessage()">送出</button>
+
+    <!-- Header -->
+    <header class="glass">
+        <div id="btn-back" class="nav-btn hidden">←</div>
+        <div id="header-title" class="title">January 2024</div>
+        <div class="flex-center">
+            <div id="btn-prev" class="nav-btn">‹</div>
+            <div id="btn-next" class="nav-btn">›</div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+    <div id="sidebar">
+        <h2 style="margin-top:0">Settings</h2>
+        <div class="setting-item">
+            <span class="setting-label">Language / 語言</span>
+            <button id="toggle-lang" class="chip">English</button>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">Ringtone Volume</span>
+            <input type="range" min="0" max="100" value="80" style="width:100%">
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px;">
+                <div class="chip" onclick="app.setRingtone('radar')">Radar (Default)</div>
+                <div class="chip" onclick="app.setRingtone('silk')">Silk</div>
+            </div>
+        </div>
     </div>
 
-    <script type="module" src="script.js"></script>
+    <!-- Main Content -->
+    <div id="main-container">
+        <!-- Month View -->
+        <div id="month-view" class="view active-view">
+            <div class="weekday-header" id="month-days-header"></div>
+            <div class="calendar-grid" id="month-grid"></div>
+        </div>
+
+        <!-- Week View -->
+        <div id="week-view" class="view slide-in-right">
+            <div class="week-container">
+                <div class="time-axis" id="week-time-axis"></div>
+                <div class="week-grid" id="week-grid"></div>
+            </div>
+        </div>
+
+        <!-- Day View -->
+        <div id="day-view" class="view slide-in-right">
+            <div class="day-sticky-header" id="day-header-tabs"></div>
+            <div id="day-scroll-area">
+                <div class="day-timeline" id="day-timeline"></div>
+            </div>
+            <!-- AI Button inside Day View -->
+            <div id="ai-btn">✨</div>
+        </div>
+    </div>
+
+    <!-- Event Modal (Create/Edit) -->
+    <div id="event-modal-backdrop" class="sidebar-backdrop" style="z-index:299;"></div>
+    <div id="event-modal" class="modal glass">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:bold; font-size:1.2rem;">Event</span>
+            <span id="btn-save-event" style="color:var(--accent-blue); font-weight:600; font-size:1.1rem;">Done</span>
+        </div>
+        <input type="text" id="event-title" class="modal-input" placeholder="Title / Note">
+        <div class="modal-row" id="time-trigger">
+            <div class="chip">Time: <span id="event-time-display">12:00</span></div>
+        </div>
+        <div class="modal-row" style="justify-content:space-between">
+            <span>Repeat Weekly</span>
+            <input type="checkbox" id="event-repeat">
+        </div>
+        <div class="modal-row" id="color-picker">
+            <!-- Colors injected via JS -->
+        </div>
+    </div>
+
+    <!-- Custom Clock Picker -->
+    <div id="clock-picker" class="clock-overlay glass">
+        <h2 id="clock-title" style="margin-bottom:20px;">Select Hour</h2>
+        <div class="clock-face" id="clock-face">
+            <div class="clock-center"></div>
+            <div class="clock-hand" id="clock-hand">
+                <div class="clock-hand-tip"></div>
+            </div>
+            <!-- Numbers injected via JS -->
+        </div>
+        <div class="modal-row" style="margin-top:30px; gap:20px;">
+            <button class="chip" onclick="clockPicker.cancel()">Cancel</button>
+            <button class="chip" style="background:var(--accent-blue)" onclick="clockPicker.confirm()">Next</button>
+        </div>
+    </div>
+
+    <!-- AI Overlay -->
+    <div id="ai-overlay" class="view slide-in-right hidden">
+        <div style="display:flex; justify-content:space-between;">
+            <span class="nav-btn" onclick="aiAssistant.close()">Cancel</span>
+            <span class="title">Gemini Assistant</span>
+            <span style="width:40px"></span>
+        </div>
+        <textarea id="ai-input" placeholder="Ask to plan a meeting..."></textarea>
+        <div id="ai-response-area" class="ai-response hidden"></div>
+        <button id="ai-submit" class="chip" style="background:var(--accent-blue); margin-top:20px; text-align:center; padding:15px;">Ask Gemini</button>
+    </div>
+
     <script>
-        // 註冊 Service Worker (PWA 必要)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        // --- 1. State & Storage ---
+        const Store = {
+            data: {
+                events: [],
+                settings: { lang: 'en', ringtone: 'radar', volume: 80 }
+            },
+            init() {
+                const saved = localStorage.getItem('dm-cal-data');
+                if (saved) this.data = JSON.parse(saved);
+            },
+            save() {
+                localStorage.setItem('dm-cal-data', JSON.stringify(this.data));
+            },
+            addEvent(evt) {
+                this.data.events.push(evt);
+                this.save();
+            },
+            updateEvent(evt) {
+                const idx = this.data.events.findIndex(e => e.id === evt.id);
+                if (idx !== -1) this.data.events[idx] = evt;
+                this.save();
+            },
+            deleteEvent(id, deleteAll = false) {
+                if (deleteAll) {
+                    // Logic to find parent ID would go here, simplified for demo
+                    this.data.events = this.data.events.filter(e => e.id !== id);
+                } else {
+                    this.data.events = this.data.events.filter(e => e.id !== id);
+                }
+                this.save();
+            },
+            getEvents(date) {
+                // Filter events for a specific date (handling repeats simplified)
+                const dateStr = date.toISOString().split('T')[0];
+                return this.data.events.filter(e => {
+                    if (e.repeat) {
+                        const evtDate = new Date(e.start);
+                        return evtDate.getDay() === date.getDay(); 
+                    }
+                    return e.start.startsWith(dateStr);
+                });
+            }
+        };
+
+        // --- 2. Utils ---
+        const Utils = {
+            colors: ['#ff3b30', '#0a84ff', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff'],
+            formatDate(date, lang) {
+                return date.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', { year: 'numeric', month: 'long' });
+            },
+            generateId: () => '_' + Math.random().toString(36).substr(2, 9),
+            getWeekDays(date) {
+                const start = new Date(date);
+                start.setDate(start.getDate() - start.getDay()); // Sunday start
+                const days = [];
+                for(let i=0; i<7; i++) {
+                    days.push(new Date(start));
+                    start.setDate(start.getDate() + 1);
+                }
+                return days;
+            }
+        };
+
+        // --- 3. Clock Picker Logic ---
+        const ClockPicker = {
+            mode: 'hour', // or 'minute'
+            selectedHour: 12,
+            selectedMinute: 0,
+            isOpen: false,
+            el: document.getElementById('clock-picker'),
+            face: document.getElementById('clock-face'),
+            hand: document.getElementById('clock-hand'),
+            title: document.getElementById('clock-title'),
+            callback: null,
+
+            open(currentTotalMinutes, cb) {
+                this.isOpen = true;
+                this.callback = cb;
+                this.selectedHour = Math.floor(currentTotalMinutes / 60);
+                this.selectedMinute = currentTotalMinutes % 60;
+                this.mode = 'hour';
+                this.el.classList.add('open');
+                this.renderFace();
+            },
+            close() {
+                this.el.classList.remove('open');
+                this.isOpen = false;
+            },
+            cancel() { this.close(); },
+            confirm() {
+                if (this.mode === 'hour') {
+                    this.mode = 'minute';
+                    this.renderFace();
+                } else {
+                    this.callback(this.selectedHour, this.selectedMinute);
+                    this.close();
+                }
+            },
+            renderFace() {
+                // clear numbers
+                const existing = this.face.querySelectorAll('.clock-number');
+                existing.forEach(e => e.remove());
+
+                this.title.innerText = this.mode === 'hour' ? 'Select Hour' : 'Select Minute';
+                const count = 12;
+                const radius = 110; 
+
+                for(let i=1; i<=count; i++) {
+                    const val = this.mode === 'hour' ? i : i * 5;
+                    const displayVal = this.mode === 'minute' && i===12 ? '0' : val;
+                    const angle = (i * 30) - 90;
+                    const rad = angle * (Math.PI / 180);
+                    const x = 140 + radius * Math.cos(rad);
+                    const y = 140 + radius * Math.sin(rad);
+                    
+                    const el = document.createElement('div');
+                    el.className = 'clock-number';
+                    el.innerText = displayVal;
+                    el.style.left = x + 'px';
+                    el.style.top = y + 'px';
+                    this.face.appendChild(el);
+                }
+                this.updateHand();
+            },
+            updateHand() {
+                let val = this.mode === 'hour' ? this.selectedHour : this.selectedMinute;
+                if (this.mode === 'hour' && val === 0) val = 12;
+                if (this.mode === 'hour' && val > 12) val -= 12;
+                
+                // Angle calculation
+                let deg = 0;
+                if (this.mode === 'hour') deg = (val % 12) * 30;
+                else deg = val * 6; // 60 mins * 6 deg = 360
+
+                this.hand.style.transform = `translate(-50%, -50%) rotate(${deg - 90}deg)`;
+                this.hand.style.width = '110px';
+            },
+            handleTouch(e) {
+                if (!this.isOpen) return;
+                e.preventDefault();
+                const rect = this.face.getBoundingClientRect();
+                const touch = e.touches[0] || e.changedTouches[0];
+                const cx = rect.left + rect.width/2;
+                const cy = rect.top + rect.height/2;
+                const x = touch.clientX - cx;
+                const y = touch.clientY - cy;
+
+                let theta = Math.atan2(y, x) * (180 / Math.PI) + 90;
+                if (theta < 0) theta += 360;
+
+                if (this.mode === 'hour') {
+                    let h = Math.round(theta / 30);
+                    if (h === 0) h = 12;
+                    this.selectedHour = h; // Simplified 1-12 handling logic for demo
+                } else {
+                    let m = Math.round(theta / 6);
+                    if (m === 60) m = 0;
+                    this.selectedMinute = m;
+                }
+                this.updateHand();
+            }
+        };
+
+        // Attach clock touch events
+        ClockPicker.face.addEventListener('touchstart', (e) => ClockPicker.handleTouch(e));
+        ClockPicker.face.addEventListener('touchmove', (e) => ClockPicker.handleTouch(e));
+        ClockPicker.face.addEventListener('touchend', (e) => ClockPicker.handleTouch(e));
+
+
+        // --- 4. Main App Controller ---
+        class App {
+            constructor() {
+                this.view = 'month'; // month, week, day
+                this.currentDate = new Date();
+                this.selectedDate = new Date();
+                this.zoomLevel = 60; // px per hour
+                
+                // Elements
+                this.els = {
+                    monthView: document.getElementById('month-view'),
+                    weekView: document.getElementById('week-view'),
+                    dayView: document.getElementById('day-view'),
+                    headerTitle: document.getElementById('header-title'),
+                    btnBack: document.getElementById('btn-back'),
+                    sidebar: document.getElementById('sidebar'),
+                    sidebarBackdrop: document.getElementById('sidebar-backdrop')
+                };
+
+                this.setupEventListeners();
+                this.render();
+            }
+
+            setupEventListeners() {
+                // Navigation
+                document.getElementById('btn-prev').onclick = () => this.changeDate(-1);
+                document.getElementById('btn-next').onclick = () => this.changeDate(1);
+                this.els.btnBack.onclick = () => this.navigate('up');
+                
+                // Sidebar Swipe
+                let startX = 0;
+                document.addEventListener('touchstart', e => {
+                    startX = e.touches[0].clientX;
+                });
+                document.addEventListener('touchmove', e => {
+                    const x = e.touches[0].clientX;
+                    if (this.view === 'month' && startX < 30 && x > 30) {
+                        this.toggleSidebar(true);
+                    }
+                });
+                
+                // Sidebar Close
+                this.els.sidebarBackdrop.onclick = () => this.toggleSidebar(false);
+                
+                // Day View Zoom (Pinch)
+                const dayArea = document.getElementById('day-scroll-area');
+                let initialDist = 0;
+                let initialZoom = 60;
+                
+                dayArea.addEventListener('touchstart', e => {
+                    if (e.touches.length === 2) {
+                        initialDist = Math.hypot(
+                            e.touches[0].clientX - e.touches[1].clientX,
+                            e.touches[0].clientY - e.touches[1].clientY
+                        );
+                        initialZoom = this.zoomLevel;
+                    }
+                });
+                
+                dayArea.addEventListener('touchmove', e => {
+                    if (e.touches.length === 2) {
+                        const dist = Math.hypot(
+                            e.touches[0].clientX - e.touches[1].clientX,
+                            e.touches[0].clientY - e.touches[1].clientY
+                        );
+                        const scale = dist / initialDist;
+                        this.zoomLevel = Math.max(30, Math.min(150, initialZoom * scale));
+                        document.getElementById('day-timeline').style.setProperty('--total-height', (this.zoomLevel * 24) + 'px');
+                        this.renderDayEvents(); // Re-render positions
+                    }
+                });
+
+                // AI Button
+                document.getElementById('ai-btn').onclick = () => aiAssistant.open();
+            }
+
+            changeDate(dir) {
+                if (this.view === 'month') {
+                    this.currentDate.setMonth(this.currentDate.getMonth() + dir);
+                } else if (this.view === 'week') {
+                    this.currentDate.setDate(this.currentDate.getDate() + (dir * 7));
+                } else {
+                    this.currentDate.setDate(this.currentDate.getDate() + dir);
+                    this.selectedDate = new Date(this.currentDate);
+                }
+                this.render();
+            }
+
+            navigate(to, params) {
+                const views = ['month-view', 'week-view', 'day-view'];
+                views.forEach(v => document.getElementById(v).classList.remove('active-view'));
+                
+                if (to === 'up') {
+                    if (this.view === 'day') this.view = 'week';
+                    else if (this.view === 'week') this.view = 'month';
+                } else {
+                    this.view = to;
+                    if (params && params.date) {
+                        this.selectedDate = new Date(params.date);
+                        this.currentDate = new Date(params.date);
+                    }
+                }
+
+                this.els.btnBack.classList.toggle('hidden', this.view === 'month');
+                
+                // Animation logic (simple class swap)
+                const targetId = this.view + '-view';
+                document.getElementById(targetId).classList.add('active-view');
+                
+                this.render();
+            }
+
+            toggleSidebar(open) {
+                this.els.sidebar.classList.toggle('open', open);
+                this.els.sidebarBackdrop.classList.toggle('open', open);
+            }
+
+            render() {
+                this.els.headerTitle.innerText = Utils.formatDate(this.currentDate, Store.data.settings.lang);
+                
+                if (this.view === 'month') this.renderMonth();
+                else if (this.view === 'week') this.renderWeek();
+                else this.renderDay();
+            }
+
+            renderMonth() {
+                const grid = document.getElementById('month-grid');
+                grid.innerHTML = '';
+                
+                const year = this.currentDate.getFullYear();
+                const month = this.currentDate.getMonth();
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                // Empty cells
+                for (let i = 0; i < firstDay; i++) {
+                    grid.appendChild(document.createElement('div'));
+                }
+
+                // Days
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'day-cell';
+                    
+                    const now = new Date();
+                    if (i === now.getDate() && month === now.getMonth() && year === now.getFullYear()) {
+                        cell.classList.add('today');
+                    }
+
+                    cell.innerHTML = `<div class="day-number">${i}</div><div class="dots-container"></div>`;
+                    
+                    // Add dots
+                    const dateObj = new Date(year, month, i);
+                    const events = Store.getEvents(dateObj);
+                    const dotsCont = cell.querySelector('.dots-container');
+                    events.slice(0, 3).forEach(e => {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot';
+                        dot.style.backgroundColor = e.color;
+                        dotsCont.appendChild(dot);
+                    });
+
+                    // Interaction
+                    cell.onclick = () => {
+                        this.currentDate = dateObj;
+                        this.navigate('week', { date: dateObj }); // Request says tap row goes to week, but tap cell logic usually implies focus.
+                        // Implemented: Go to Week view focused on this date
+                    };
+                    
+                    grid.appendChild(cell);
+                }
+            }
+
+            renderWeek() {
+                const grid = document.getElementById('week-grid');
+                grid.innerHTML = '';
+                const days = Utils.getWeekDays(this.currentDate);
+                
+                days.forEach(d => {
+                    const col = document.createElement('div');
+                    col.className = 'week-col';
+                    col.onclick = () => this.navigate('day', { date: d });
+                    
+                    // Header
+                    const header = document.createElement('div');
+                    header.style.textAlign = 'center';
+                    header.style.padding = '5px';
+                    header.style.fontSize = '0.8rem';
+                    header.style.color = 'var(--text-secondary)';
+                    header.innerText = d.getDate();
+                    if (d.getDate() === new Date().getDate()) header.style.color = 'var(--accent-red)';
+                    col.appendChild(header);
+
+                    // Render bars (Compressed view)
+                    const events = Store.getEvents(d);
+                    events.forEach(e => {
+                        const start = new Date(e.start);
+                        const end = new Date(e.end);
+                        const startH = start.getHours() + start.getMinutes()/60;
+                        const durationH = (end - start) / (1000 * 60 * 60);
+                        
+                        const bar = document.createElement('div');
+                        bar.className = 'week-event-bar';
+                        bar.style.top = (startH / 24 * 100) + '%';
+                        bar.style.height = (durationH / 24 * 100) + '%';
+                        bar.style.backgroundColor = e.color;
+                        col.appendChild(bar);
+                    });
+
+                    grid.appendChild(col);
+                });
+
+                // Time axis
+                const axis = document.getElementById('week-time-axis');
+                axis.innerHTML = '';
+                for(let i=0; i<=24; i+=4) { // Simplified interval
+                    const label = document.createElement('div');
+                    label.className = 'time-label';
+                    label.innerText = i + ':00';
+                    axis.appendChild(label);
+                }
+            }
+
+            renderDay() {
+                // Header Tabs
+                const tabsContainer = document.getElementById('day-header-tabs');
+                tabsContainer.innerHTML = '';
+                const weekDays = Utils.getWeekDays(this.currentDate);
+                const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+                
+                weekDays.forEach(d => {
+                    const tab = document.createElement('div');
+                    tab.className = 'day-tab';
+                    if (d.getDate() === this.selectedDate.getDate()) tab.classList.add('active');
+                    tab.innerHTML = `<span>${dayNames[d.getDay()]}</span><strong>${d.getDate()}</strong>`;
+                    tab.onclick = () => {
+                        this.selectedDate = d;
+                        this.currentDate = d; // Sync
+                        this.renderDay();
+                    };
+                    tabsContainer.appendChild(tab);
+                });
+
+                // Timeline
+                const timeline = document.getElementById('day-timeline');
+                timeline.innerHTML = '';
+                timeline.style.height = (this.zoomLevel * 24) + 'px';
+
+                // Grid lines
+                for(let i=0; i<24; i++) {
+                    const marker = document.createElement('div');
+                    marker.className = 'hour-marker';
+                    marker.style.top = (i * this.zoomLevel) + 'px';
+                    marker.innerText = i + ':00';
+                    timeline.appendChild(marker);
+                }
+
+                // Interaction Area (for creating events)
+                timeline.onclick = (e) => {
+                    if (e.target === timeline) {
+                        const rect = timeline.getBoundingClientRect();
+                        const y = e.clientY - rect.top + document.getElementById('day-scroll-area').scrollTop;
+                        const hour = Math.floor(y / this.zoomLevel);
+                        EventModal.open(this.selectedDate, hour);
+                    }
+                };
+
+                this.renderDayEvents();
+            }
+
+            renderDayEvents() {
+                const timeline = document.getElementById('day-timeline');
+                // Clear existing events
+                const existing = timeline.querySelectorAll('.day-event-block');
+                existing.forEach(e => e.remove());
+
+                const events = Store.getEvents(this.selectedDate);
+                events.forEach(e => {
+                    const start = new Date(e.start);
+                    const end = new Date(e.end);
+                    const startH = start.getHours() + start.getMinutes()/60;
+                    const durationH = (end - start) / (1000 * 60 * 60);
+
+                    const el = document.createElement('div');
+                    el.className = 'day-event-block';
+                    el.style.top = (startH * this.zoomLevel) + 'px';
+                    el.style.height = (durationH * this.zoomLevel) + 'px';
+                    el.style.backgroundColor = e.color;
+                    el.innerHTML = `<strong>${e.title}</strong><br><span style="font-size:0.8em">${start.getHours()}:${String(start.getMinutes()).padStart(2,'0')}</span>`;
+
+                    if (e.reminder) el.classList.add('reminder-active');
+
+                    // Gesture: Swipe Left
+                    let touchStartX = 0;
+                    el.addEventListener('touchstart', (ev) => {
+                        touchStartX = ev.touches[0].clientX;
+                        // Long press check
+                        this.longPressTimer = setTimeout(() => {
+                            e.reminder = !e.reminder;
+                            Store.updateEvent(e);
+                            this.renderDayEvents();
+                            if(navigator.vibrate) navigator.vibrate(200);
+                        }, 800);
+                    });
+
+                    el.addEventListener('touchend', (ev) => {
+                        clearTimeout(this.longPressTimer);
+                        const diff = touchStartX - ev.changedTouches[0].clientX;
+                        if (diff > 50) { // Swipe Left
+                            el.classList.add('swiped');
+                            // Create Actions BG
+                            if (!el.querySelector('.event-actions')) {
+                                const acts = document.createElement('div');
+                                acts.className = 'event-actions';
+                                acts.innerHTML = `<div class="action-btn btn-edit">Edit</div><div class="action-btn btn-delete">Del</div>`;
+                                el.appendChild(acts);
+                                acts.querySelector('.btn-delete').onclick = (stop) => {
+                                    stop.stopPropagation();
+                                    if(confirm('Delete event?')) {
+                                        Store.deleteEvent(e.id);
+                                        this.renderDayEvents();
+                                    }
+                                };
+                                acts.querySelector('.btn-edit').onclick = (stop) => {
+                                    stop.stopPropagation();
+                                    EventModal.open(this.selectedDate, start.getHours(), e);
+                                };
+                            }
+                        } else if (diff < -50) { // Swipe Right (Reset)
+                            el.classList.remove('swiped');
+                        } else {
+                            // Tap to expand (Mock detail)
+                           // alert('Event Details: ' + e.title);
+                        }
+                    });
+
+                    timeline.appendChild(el);
+                });
+            }
+            
+            setRingtone(tone) {
+                Store.data.settings.ringtone = tone;
+                Store.save();
+                alert(`Ringtone set to ${tone}`);
+            }
         }
+
+        // --- 5. Event Modal Logic ---
+        const EventModal = {
+            el: document.getElementById('event-modal'),
+            backdrop: document.getElementById('event-modal-backdrop'),
+            titleInput: document.getElementById('event-title'),
+            timeDisplay: document.getElementById('event-time-display'),
+            colorPicker: document.getElementById('color-picker'),
+            currentEventData: null,
+            baseDate: null,
+
+            init() {
+                // Populate colors
+                this.colorPicker.innerHTML = '';
+                Utils.colors.forEach(c => {
+                    const dot = document.createElement('div');
+                    dot.className = 'color-dot';
+                    dot.style.backgroundColor = c;
+                    dot.onclick = () => {
+                        this.selectedColor = c;
+                        this.updateColorUI();
+                    };
+                    this.colorPicker.appendChild(dot);
+                });
+                
+                document.getElementById('btn-save-event').onclick = () => this.save();
+                this.backdrop.onclick = () => this.close();
+                document.getElementById('time-trigger').onclick = () => {
+                    const [h, m] = this.timeDisplay.innerText.split(':').map(Number);
+                    const totalMins = h * 60 + m;
+                    ClockPicker.open(totalMins, (hour, minute) => {
+                        this.selectedTime = { h: hour, m: minute };
+                        this.timeDisplay.innerText = `${hour}:${String(minute).padStart(2,'0')}`;
+                    });
+                };
+            },
+
+            open(date, startHour, existingEvent = null) {
+                this.baseDate = date;
+                this.el.classList.add('open');
+                this.backdrop.classList.add('open');
+                
+                if (existingEvent) {
+                    this.currentEventData = existingEvent;
+                    this.titleInput.value = existingEvent.title;
+                    const d = new Date(existingEvent.start);
+                    this.selectedTime = { h: d.getHours(), m: d.getMinutes() };
+                    this.selectedColor = existingEvent.color;
+                } else {
+                    this.currentEventData = null;
+                    this.titleInput.value = '';
+                    this.selectedTime = { h: startHour || 12, m: 0 };
+                    this.selectedColor = Utils.colors[0];
+                }
+                
+                this.timeDisplay.innerText = `${this.selectedTime.h}:${String(this.selectedTime.m).padStart(2,'0')}`;
+                this.updateColorUI();
+            },
+
+            close() {
+                this.el.classList.remove('open');
+                this.backdrop.classList.remove('open');
+            },
+
+            updateColorUI() {
+                Array.from(this.colorPicker.children).forEach(dot => {
+                    dot.classList.toggle('selected', dot.style.backgroundColor === 'rgb(' + hexToRgb(this.selectedColor) + ')' || dot.style.backgroundColor === this.selectedColor);
+                });
+            },
+
+            save() {
+                const title = this.titleInput.value || 'New Event';
+                const start = new Date(this.baseDate);
+                start.setHours(this.selectedTime.h, this.selectedTime.m);
+                const end = new Date(start);
+                end.setHours(start.getHours() + 1); // Default 1 hour
+
+                const event = {
+                    id: this.currentEventData ? this.currentEventData.id : Utils.generateId(),
+                    title: title,
+                    start: start.toISOString(),
+                    end: end.toISOString(),
+                    color: this.selectedColor,
+                    repeat: document.getElementById('event-repeat').checked,
+                    reminder: false
+                };
+
+                if (this.currentEventData) Store.updateEvent(event);
+                else Store.addEvent(event);
+
+                this.close();
+                app.render(); // Refresh UI
+            }
+        };
+
+        function hexToRgb(hex) {
+            // Helper for color comparison if needed
+            // simplified
+            return hex; 
+        }
+
+        // --- 6. AI Assistant Mock ---
+        const aiAssistant = {
+            overlay: document.getElementById('ai-overlay'),
+            input: document.getElementById('ai-input'),
+            responseArea: document.getElementById('ai-response-area'),
+            
+            open() {
+                this.overlay.classList.remove('hidden');
+                setTimeout(() => this.overlay.classList.add('active-view'), 10);
+                this.input.value = '';
+                this.responseArea.classList.add('hidden');
+            },
+            close() {
+                this.overlay.classList.remove('active-view');
+                setTimeout(() => this.overlay.classList.add('hidden'), 300);
+            },
+            async submit() {
+                const query = this.input.value;
+                if (!query) return;
+                
+                this.responseArea.innerText = "Thinking...";
+                this.responseArea.classList.remove('hidden');
+                
+                // Simulate API delay
+                setTimeout(() => {
+                    this.responseArea.innerHTML = `
+                        <strong>Gemini Suggestion:</strong><br>
+                        I've analyzed your schedule. Based on "${query}", 
+                        I suggest a slot at <strong>14:00 today</strong>.
+                        <br><br>
+                        <em>Creating event draft...</em>
+                    `;
+                    // Auto open event modal after suggestion
+                    setTimeout(() => {
+                        this.close();
+                        EventModal.open(app.selectedDate, 14);
+                        EventModal.titleInput.value = query;
+                    }, 2000);
+                }, 1500);
+            }
+        };
+        document.getElementById('ai-submit').onclick = () => aiAssistant.submit();
+
+        // --- Initialize ---
+        Store.init();
+        EventModal.init();
+        const app = new App();
+
     </script>
 </body>
 </html>
