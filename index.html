@@ -232,7 +232,13 @@
         <button id="ai-submit" class="chip" style="background:var(--accent-blue); margin-top:20px; text-align:center; padding:15px;">Ask Gemini</button>
     </div>
 
-    <script>
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+// ★ 請在此填入你的 API Key ★
+        const API_KEY = "你的_API_KEY_貼在這裡"; 
+        const genAI = new GoogleGenerativeAI(API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         // --- 1. State & Storage ---
         const Store = {
             data: {
@@ -946,4 +952,5 @@
     </script>
 </body>
 </html>
+
 
