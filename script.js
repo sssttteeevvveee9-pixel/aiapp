@@ -3,33 +3,24 @@ import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 // ★★★ 請將下面這行引號內的文字換成你的 API Key ★★★
 const API_KEY = "AIzaSyDvWhhjHmRqNOdAUfd0i16qaUL8MaSg0Uc";
 
-const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-window.sendMessage = async function() {
-    const inputField = document.getElementById('user-input');
-    const historyDiv = document.getElementById('chat-history');
-    const userText = inputField.value;
-
-    if (!userText) return;
-
-    // 顯示使用者訊息
-    historyDiv.innerHTML += `<div class="message user">${userText}</div>`;
-    inputField.value = '';
-
-    try {
-        const result = await model.generateContent(userText);
-        const response = await result.response;
-        const text = response.text();
-        
-        // 顯示 AI 回應
-        historyDiv.innerHTML += `<div class="message ai">${text}</div>`;
-    } catch (error) {
-        historyDiv.innerHTML += `<div class="message ai">發生錯誤，請檢查 API Key 或網路。</div>`;
-        console.error(error);
+{
+  "name": "DarkMode Cal",
+  "short_name": "DM Cal",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192/000000/ffffff?text=Cal",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512/000000/ffffff?text=Cal",
+      "sizes": "512x512",
+      "type": "image/png"
     }
-    
-    // 捲動到底部
-    historyDiv.scrollTop = historyDiv.scrollHeight;
-
+  ]
 }
