@@ -1,348 +1,353 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <title>Deep Dark Calendar</title>
+    <title>Dark Calendar</title>
     <style>
         :root {
             --bg-color: #000000;
             --surface-color: #1c1c1e;
             --text-primary: #ffffff;
             --text-secondary: #8e8e93;
-            --accent-red: #ff3b30;
-            --accent-blue: #0a84ff;
-            --glass-bg: rgba(28, 28, 30, 0.95); /* 稍微加深一點避免太透 */
+            --accent-color: #0a84ff;
+            --danger-color: #ff453a;
             --safe-top: env(safe-area-inset-top, 20px);
             --safe-bottom: env(safe-area-inset-bottom, 20px);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, sans-serif;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
         body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; }
-
         .hidden { display: none !important; }
-        .glass { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-        .flex-center { display: flex; justify-content: center; align-items: center; }
 
         /* Header */
         header {
             position: fixed; top: 0; left: 0; right: 0; height: calc(50px + var(--safe-top));
             padding-top: var(--safe-top); display: flex; justify-content: space-between; align-items: center;
-            padding-left: 16px; padding-right: 16px; z-index: 100; border-bottom: 0.5px solid rgba(255,255,255,0.1);
-            background: var(--bg-color); /* 確保標題有背景 */
+            padding-left: 16px; padding-right: 16px; z-index: 100; background: var(--bg-color);
+            border-bottom: 0.5px solid rgba(255,255,255,0.1);
         }
-        .nav-btn { font-size: 1.5rem; color: var(--accent-blue); cursor: pointer; padding: 10px; }
-        .title { font-weight: 600; font-size: 1.1rem; }
+        .nav-btn { font-size: 1.2rem; color: var(--accent-color); padding: 10px; cursor: pointer; }
+        .title { font-weight: 600; font-size: 1.1rem; text-transform: capitalize; }
 
         /* Main Container */
         #main-container { position: relative; width: 100%; height: 100%; padding-top: calc(50px + var(--safe-top)); }
-        
         .view { position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: var(--bg-color); padding-top: calc(50px + var(--safe-top)); display: none; }
-        .view.active-view { display: block; }
+        .view.active { display: block; }
 
         /* Month View */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 10px; }
-        .weekday-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--text-secondary); font-size: 0.8rem; padding: 10px 10px 0; }
-        .day-cell { height: 11vh; display: flex; flex-direction: column; align-items: center; border-radius: 8px; position: relative; }
-        .day-cell.today .day-number { background: var(--accent-red); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
-        .day-number { font-size: 1.1rem; margin-top: 6px; font-weight: 500; }
-        .dots-container { display: flex; gap: 3px; margin-top: 6px; }
-        .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 10px; }
+        .weekday-row { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--text-secondary); font-size: 0.8rem; padding: 10px 10px 0; }
+        .day-cell { height: 11vh; display: flex; flex-direction: column; align-items: center; border-radius: 8px; position: relative; border-top: 0.5px solid rgba(255,255,255,0.05); }
+        .day-cell.today .day-num { background: var(--danger-color); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+        .day-num { margin-top: 6px; font-size: 1rem; font-weight: 500; }
+        .dots { display: flex; gap: 3px; margin-top: 4px; }
+        .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-color); }
+
+        /* Week View */
+        .week-container { display: flex; height: 100%; overflow: hidden; }
+        .time-col { width: 50px; border-right: 0.5px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; }
+        .time-slot { flex: 1; font-size: 0.7rem; color: var(--text-secondary); text-align: right; padding-right: 5px; transform: translateY(-50%); }
+        .week-grid { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); }
+        .week-day-col { border-right: 0.5px solid rgba(255,255,255,0.05); position: relative; }
+        .week-header { text-align: center; font-size: 0.8rem; padding: 5px; border-bottom: 0.5px solid rgba(255,255,255,0.1); }
+        .week-event { position: absolute; left: 2px; right: 2px; background: var(--accent-color); border-radius: 4px; opacity: 0.8; }
 
         /* Day View */
-        .day-sticky-header { display: flex; justify-content: space-around; padding: 10px 0; background: var(--bg-color); border-bottom: 0.5px solid rgba(255,255,255,0.1); }
-        .day-tab { padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; color: var(--text-secondary); }
-        .day-tab.active { background: var(--surface-color); color: var(--text-primary); }
-        
-        #day-scroll-area { overflow-y: auto; height: calc(100vh - 130px - var(--safe-top)); position: relative; -webkit-overflow-scrolling: touch; }
-        .day-timeline { position: relative; width: 100%; height: 1440px; }
-        .hour-marker { position: absolute; width: 100%; border-top: 0.5px solid rgba(255,255,255,0.1); color: var(--text-secondary); font-size: 0.8rem; padding-left: 10px; height: 60px; }
-        
-        .day-event-block { 
-            position: absolute; left: 60px; right: 10px; border-radius: 6px; padding: 5px; 
-            overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.3); font-size: 0.9rem;
-        }
-
-        /* AI Button & Overlay */
-        #ai-btn { 
-            position: fixed; bottom: calc(30px + var(--safe-bottom)); right: 20px; 
-            width: 56px; height: 56px; border-radius: 28px; 
-            background: linear-gradient(135deg, #2980b9, #8e44ad); 
-            display: flex; align-items: center; justify-content: center; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 200; font-size: 24px; cursor: pointer;
-        }
-
-        #ai-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: var(--bg-color); z-index: 300; padding: 20px; 
-            padding-top: calc(60px + var(--safe-top));
-            display: flex; flex-direction: column;
-        }
-        #ai-input { 
-            width: 100%; height: 100px; background: rgba(255,255,255,0.1); 
-            border: none; border-radius: 12px; color: white; padding: 15px; 
-            font-size: 1.1rem; margin-bottom: 20px; outline: none;
-        }
-        .ai-response-box { 
-            flex: 1; background: var(--surface-color); border-radius: 12px; padding: 15px; 
-            overflow-y: auto; color: #d1d1d6; line-height: 1.5;
-        }
+        #day-scroll { overflow-y: auto; height: calc(100vh - 50px - var(--safe-top)); position: relative; -webkit-overflow-scrolling: touch; }
+        .day-timeline { position: relative; height: 1440px; background: repeating-linear-gradient(to bottom, transparent 0 59px, rgba(255,255,255,0.1) 60px); }
+        .hour-mark { position: absolute; left: 10px; color: var(--text-secondary); font-size: 0.8rem; transform: translateY(-50%); }
+        .day-event { position: absolute; left: 60px; right: 10px; background: var(--accent-color); border-radius: 6px; padding: 5px; font-size: 0.9rem; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
 
         /* Modal */
-        .modal { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface-color); padding: 20px; border-radius: 20px 20px 0 0; z-index: 400; transform: translateY(100%); transition: transform 0.3s; padding-bottom: calc(20px + var(--safe-bottom)); }
+        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; display: none; }
+        .modal { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface-color); border-radius: 20px 20px 0 0; padding: 20px; z-index: 300; transform: translateY(100%); transition: transform 0.3s; padding-bottom: calc(20px + var(--safe-bottom)); }
         .modal.open { transform: translateY(0); }
-        .modal-input { width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: none; color: white; border-radius: 8px; font-size: 1rem; margin-bottom: 15px; }
-        .btn-primary { background: var(--accent-blue); color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; float: right; }
+        .modal-input { width: 100%; background: rgba(255,255,255,0.1); border: none; padding: 12px; border-radius: 10px; color: white; font-size: 1.1rem; margin-bottom: 15px; }
+        .modal-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .chip { background: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; }
+        .btn-ai { background: linear-gradient(135deg, #2980b9, #8e44ad); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
+
+        /* AI Overlay */
+        #ai-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 400; padding: 20px; display: none; padding-top: var(--safe-top); }
+        #ai-overlay.open { display: flex; flex-direction: column; }
     </style>
 </head>
 <body>
 
     <header>
-        <div id="btn-back" class="nav-btn hidden">←</div>
+        <div id="btn-back" class="nav-btn hidden">Month</div>
         <div id="header-title" class="title">Calendar</div>
-        <div class="flex-center">
+        <div style="display:flex; gap:15px;">
             <div id="btn-prev" class="nav-btn">‹</div>
             <div id="btn-next" class="nav-btn">›</div>
         </div>
     </header>
 
     <div id="main-container">
-        <div id="month-view" class="view active-view">
-            <div class="weekday-header" id="month-days-header">
-                <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
-            </div>
+        <div id="month-view" class="view active">
+            <div class="weekday-row"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div>
             <div class="calendar-grid" id="month-grid"></div>
         </div>
 
+        <div id="week-view" class="view">
+            <div class="week-container">
+                <div class="time-col" id="week-time-col"></div>
+                <div class="week-grid" id="week-grid"></div>
+            </div>
+        </div>
+
         <div id="day-view" class="view">
-            <div class="day-sticky-header" id="day-header-tabs"></div>
-            <div id="day-scroll-area">
+            <div id="day-scroll">
                 <div class="day-timeline" id="day-timeline"></div>
             </div>
         </div>
     </div>
 
-    <div id="ai-btn">✨</div>
-
-    <div id="ai-overlay" class="hidden">
-        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-            <span class="title">Gemini Assistant</span>
-            <span onclick="aiAssistant.close()" style="color:var(--accent-red); cursor:pointer;">Close</span>
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div id="event-modal" class="modal">
+        <div class="modal-row">
+            <span style="font-weight:bold; font-size:1.2rem">Event</span>
+            <button onclick="EventModal.save()" style="color:var(--accent-color); background:none; border:none; font-size:1.1rem; font-weight:bold;">Done</button>
         </div>
-        <textarea id="ai-input" placeholder="Type request... (e.g., Dinner at 7pm)"></textarea>
-        <button onclick="aiAssistant.submit()" class="btn-primary" style="width:100%; margin-bottom:20px;">Ask AI</button>
-        <div id="ai-response" class="ai-response-box hidden"></div>
+        
+        <input type="text" id="evt-title" class="modal-input" placeholder="Title">
+        
+        <div class="modal-row">
+            <div class="chip" id="evt-time-display">12:00</div>
+            <button class="btn-ai" onclick="aiAssistant.open()">✨ AI Plan</button>
+        </div>
+
+        <button onclick="EventModal.close()" style="width:100%; padding:15px; background:rgba(255,255,255,0.05); border:none; color:var(--danger-color); border-radius:12px; font-size:1rem;">Cancel</button>
     </div>
 
-    <div id="event-modal" class="modal">
-        <h3 style="margin-top:0">New Event</h3>
-        <input type="text" id="evt-title" class="modal-input" placeholder="Title">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <span>Time: <span id="evt-time">12:00</span></span>
+    <div id="ai-overlay">
+        <div class="modal-row" style="margin-top:20px;">
+            <span class="title">Gemini Assistant</span>
+            <span onclick="aiAssistant.close()" style="color:var(--accent-color); cursor:pointer;">Close</span>
         </div>
-        <button onclick="EventModal.save()" class="btn-primary">Save</button>
-        <button onclick="EventModal.close()" style="background:transparent; color:gray; border:none; margin-right:20px;">Cancel</button>
+        <textarea id="ai-input" class="modal-input" style="height:150px;" placeholder="e.g. Meeting with Tom tomorrow at 3pm..."></textarea>
+        <button onclick="aiAssistant.submit()" style="width:100%; background:var(--accent-color); color:white; border:none; padding:15px; border-radius:12px; font-weight:bold; font-size:1.1rem;">Generate</button>
+        <div id="ai-loading" style="margin-top:20px; color:#8e8e93; text-align:center;" class="hidden">Thinking...</div>
     </div>
 
     <script type="module">
         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // 請在這裡貼上你的 API KEY (保留引號)
+        // ★★★ 請填入您的 API KEY ★★★
         const API_KEY = "AIzaSyDvWhhjHmRqNOdAUfd0i16qaUL8MaSg0Uc"; 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
-        // --- Store (Data) ---
+        
+        // --- Data Store ---
         const Store = {
             events: [],
-            init() {
-                try {
-                    const saved = localStorage.getItem('dm-cal-data');
-                    if (saved) this.events = JSON.parse(saved);
-                } catch(e) { console.error('Load error', e); }
-            },
-            save() {
-                localStorage.setItem('dm-cal-data', JSON.stringify(this.events));
-            },
-            add(evt) { this.events.push(evt); this.save(); },
-            get(date) {
-                const dStr = date.toDateString();
+            init() { try { this.events = JSON.parse(localStorage.getItem('cal-data')||'[]'); } catch(e){} },
+            save() { localStorage.setItem('cal-data', JSON.stringify(this.events)); },
+            add(e) { this.events.push(e); this.save(); },
+            get(date) { 
+                const dStr = date.toDateString(); 
                 return this.events.filter(e => new Date(e.start).toDateString() === dStr);
+            },
+            getWeek(start) {
+                const end = new Date(start); end.setDate(end.getDate()+7);
+                return this.events.filter(e => {
+                    const d = new Date(e.start);
+                    return d >= start && d < end;
+                });
             }
         };
 
-        // --- App Controller ---
+        // --- App ---
         const App = {
             view: 'month',
             date: new Date(),
             init() {
                 Store.init();
-                this.render();
                 this.setupNav();
+                this.render();
             },
             setupNav() {
-                document.getElementById('btn-prev').onclick = () => this.changeDate(-1);
-                document.getElementById('btn-next').onclick = () => this.changeDate(1);
-                document.getElementById('btn-back').onclick = () => this.setView('month');
-                document.getElementById('ai-btn').onclick = () => aiAssistant.open();
+                document.getElementById('btn-prev').onclick = () => this.moveDate(-1);
+                document.getElementById('btn-next').onclick = () => this.moveDate(1);
+                document.getElementById('btn-back').onclick = () => this.goUp();
+                document.getElementById('modal-backdrop').onclick = () => EventModal.close();
             },
-            changeDate(dir) {
+            moveDate(dir) {
                 if (this.view === 'month') this.date.setMonth(this.date.getMonth() + dir);
+                else if (this.view === 'week') this.date.setDate(this.date.getDate() + (dir * 7));
                 else this.date.setDate(this.date.getDate() + dir);
                 this.render();
             },
-            setView(v, targetDate) {
+            goUp() {
+                if(this.view === 'day') this.setView('week');
+                else if(this.view === 'week') this.setView('month');
+            },
+            setView(v, d) {
                 this.view = v;
-                if (targetDate) this.date = new Date(targetDate);
-                document.querySelectorAll('.view').forEach(el => el.classList.remove('active-view'));
-                document.getElementById(v + '-view').classList.add('active-view');
-                document.getElementById('btn-back').classList.toggle('hidden', v === 'month');
+                if(d) this.date = new Date(d);
+                document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
+                document.getElementById(v+'-view').classList.add('active');
+                
+                // Back button text
+                const backBtn = document.getElementById('btn-back');
+                backBtn.classList.toggle('hidden', v === 'month');
+                backBtn.innerText = v === 'day' ? 'Week' : 'Month';
+                
                 this.render();
             },
             render() {
-                document.getElementById('header-title').innerText = this.date.toLocaleDateString();
-                if (this.view === 'month') this.renderMonth();
+                // Title Logic: Month view only shows "January 2024"
+                const opts = this.view === 'month' ? { month: 'long', year: 'numeric' } : { dateStyle: 'medium' };
+                document.getElementById('header-title').innerText = this.date.toLocaleDateString('en-US', opts);
+
+                if(this.view === 'month') this.renderMonth();
+                else if(this.view === 'week') this.renderWeek();
                 else this.renderDay();
             },
             renderMonth() {
-                const grid = document.getElementById('month-grid');
-                grid.innerHTML = '';
+                const grid = document.getElementById('month-grid'); grid.innerHTML = '';
                 const y = this.date.getFullYear(), m = this.date.getMonth();
-                const firstDay = new Date(y, m, 1).getDay();
-                const daysInMonth = new Date(y, m + 1, 0).getDate();
-
-                for(let i=0; i<firstDay; i++) grid.appendChild(document.createElement('div'));
+                const first = new Date(y, m, 1).getDay();
+                const days = new Date(y, m+1, 0).getDate();
                 
-                for(let i=1; i<=daysInMonth; i++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'day-cell';
-                    if (i === new Date().getDate() && m === new Date().getMonth()) cell.classList.add('today');
-                    cell.innerHTML = `<div class="day-number">${i}</div><div class="dots-container"></div>`;
+                for(let i=0; i<first; i++) grid.appendChild(document.createElement('div'));
+                for(let i=1; i<=days; i++) {
+                    const el = document.createElement('div');
+                    el.className = 'day-cell';
+                    if(i===new Date().getDate() && m===new Date().getMonth()) el.classList.add('today');
+                    el.innerHTML = `<div class="day-num">${i}</div><div class="dots"></div>`;
                     
-                    // Dots
                     const evts = Store.get(new Date(y, m, i));
-                    evts.slice(0,3).forEach(e => {
-                        const dot = document.createElement('div');
-                        dot.className = 'dot';
-                        dot.style.background = e.color || '#0a84ff';
-                        cell.querySelector('.dots-container').appendChild(dot);
+                    evts.slice(0,3).forEach(() => {
+                        const d = document.createElement('div'); d.className='dot';
+                        el.querySelector('.dots').appendChild(d);
                     });
+                    
+                    el.onclick = () => this.setView('week', new Date(y, m, i)); // Tap day -> Week
+                    grid.appendChild(el);
+                }
+            },
+            renderWeek() {
+                const grid = document.getElementById('week-grid'); grid.innerHTML = '';
+                const timeCol = document.getElementById('week-time-col'); timeCol.innerHTML = '';
+                
+                // Calculate Sunday start
+                const start = new Date(this.date);
+                start.setDate(start.getDate() - start.getDay());
 
-                    cell.onclick = () => this.setView('day', new Date(y, m, i));
-                    grid.appendChild(cell);
+                // Time labels
+                for(let i=0; i<24; i+=4) {
+                    const t = document.createElement('div'); t.style.height='25%'; 
+                    t.innerHTML = `<div class="time-slot">${i}:00</div>`;
+                    timeCol.appendChild(t);
+                }
+
+                // Days
+                for(let i=0; i<7; i++) {
+                    const d = new Date(start); d.setDate(d.getDate() + i);
+                    const col = document.createElement('div'); col.className = 'week-day-col';
+                    col.innerHTML = `<div class="week-header">${d.getDate()}</div>`;
+                    col.onclick = () => this.setView('day', d);
+                    
+                    const evts = Store.get(d);
+                    evts.forEach(e => {
+                        const s = new Date(e.start);
+                        const top = (s.getHours() + s.getMinutes()/60) / 24 * 100;
+                        const bar = document.createElement('div');
+                        bar.className = 'week-event';
+                        bar.style.top = top + '%';
+                        bar.style.height = '4%'; // fixed small height for overview
+                        col.appendChild(bar);
+                    });
+                    grid.appendChild(col);
                 }
             },
             renderDay() {
-                const timeline = document.getElementById('day-timeline');
-                timeline.innerHTML = '';
-                // Markers
+                const tl = document.getElementById('day-timeline'); tl.innerHTML = '';
                 for(let i=0; i<24; i++) {
-                    const m = document.createElement('div');
-                    m.className = 'hour-marker';
-                    m.style.top = (i*60)+'px';
-                    m.innerText = i + ':00';
-                    timeline.appendChild(m);
+                    const mk = document.createElement('div'); mk.className='hour-mark';
+                    mk.style.top = (i*60)+'px'; mk.innerText = i+':00';
+                    tl.appendChild(mk);
                 }
-                // Events
-                const evts = Store.get(this.date);
-                evts.forEach(e => {
-                    const start = new Date(e.start);
-                    const top = start.getHours()*60 + start.getMinutes();
-                    const el = document.createElement('div');
-                    el.className = 'day-event-block';
-                    el.style.top = top + 'px';
-                    el.style.height = '60px'; // default 1 hr
-                    el.style.background = e.color || '#0a84ff';
+                Store.get(this.date).forEach(e => {
+                    const s = new Date(e.start);
+                    const top = s.getHours()*60 + s.getMinutes();
+                    const el = document.createElement('div'); el.className='day-event';
+                    el.style.top = top+'px'; el.style.height='60px';
                     el.innerText = e.title;
-                    timeline.appendChild(el);
+                    tl.appendChild(el);
                 });
-                // Click to create
-                timeline.onclick = (e) => {
-                    if(e.target === timeline) {
-                        const rect = timeline.getBoundingClientRect();
-                        const y = e.clientY - rect.top + document.getElementById('day-scroll-area').scrollTop;
-                        const h = Math.floor(y/60);
-                        EventModal.open(h);
+                tl.onclick = (e) => {
+                    if(e.target === tl) {
+                        const y = e.offsetY;
+                        EventModal.open(Math.floor(y/60));
                     }
                 }
             }
         };
 
-        // --- Event Modal ---
+        // --- Modal & AI ---
         const EventModal = {
             el: document.getElementById('event-modal'),
+            bd: document.getElementById('modal-backdrop'),
             hour: 12,
-            open(h) {
-                this.hour = h;
-                document.getElementById('evt-time').innerText = h + ':00';
+            open(h, title='') {
+                this.hour = h || 12;
+                document.getElementById('evt-time-display').innerText = this.hour + ':00';
+                document.getElementById('evt-title').value = title;
                 this.el.classList.add('open');
+                this.bd.style.display = 'block';
             },
-            close() { this.el.classList.remove('open'); },
+            close() {
+                this.el.classList.remove('open');
+                this.bd.style.display = 'none';
+            },
             save() {
-                const title = document.getElementById('evt-title').value || 'New Event';
-                const start = new Date(App.date);
-                start.setHours(this.hour, 0);
-                Store.add({ title, start: start.toString(), color: '#0a84ff' });
+                const title = document.getElementById('evt-title').value || 'Event';
+                const d = new Date(App.date); d.setHours(this.hour, 0);
+                Store.add({ title, start: d.toString() });
                 this.close();
                 App.render();
             }
         };
 
-        // --- AI Assistant ---
         const aiAssistant = {
             el: document.getElementById('ai-overlay'),
-            open() { this.el.classList.remove('hidden'); },
-            close() { this.el.classList.add('hidden'); },
+            open() { this.el.classList.add('open'); },
+            close() { this.el.classList.remove('open'); },
             async submit() {
-                const input = document.getElementById('ai-input');
-                const respBox = document.getElementById('ai-response');
-                const prompt = input.value;
-                if(!prompt) return;
-
-                respBox.classList.remove('hidden');
-                respBox.innerText = "Thinking...";
-
+                const txt = document.getElementById('ai-input').value;
+                const loader = document.getElementById('ai-loading');
+                if(!txt) return;
+                loader.classList.remove('hidden');
+                
                 try {
                     const genAI = new GoogleGenerativeAI(API_KEY);
                     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                    
-                    const result = await model.generateContent(`
-                        You are a calendar assistant. 
-                        User asks: "${prompt}". 
-                        Suggest a simplified JSON: { "title": "Event Name", "hour": 14, "reason": "brief reason" }
-                        Return ONLY JSON.
+                    const res = await model.generateContent(`
+                        Current Date: ${App.date.toDateString()}
+                        User Request: "${txt}"
+                        Output JSON only: {"title": "Event Name", "hour": 14}
                     `);
-                    const text = result.response.text();
+                    const json = JSON.parse(res.response.text().match(/\{.*\}/s)[0]);
                     
-                    // Try parse
-                    const match = text.match(/\{.*\}/s);
-                    if(match) {
-                        const json = JSON.parse(match[0]);
-                        respBox.innerHTML = `Suggestion: ${json.reason}<br>Creating event...`;
-                        setTimeout(() => {
-                            this.close();
-                            EventModal.open(json.hour);
-                            document.getElementById('evt-title').value = json.title;
-                        }, 1500);
-                    } else {
-                        respBox.innerText = text;
-                    }
+                    this.close();
+                    // Auto-fill modal
+                    EventModal.hour = json.hour;
+                    EventModal.open(json.hour, json.title);
                 } catch(e) {
-                    respBox.innerText = "Error: " + e.message;
-                    console.error(e);
+                    alert('AI Error: ' + e.message);
+                } finally {
+                    loader.classList.add('hidden');
                 }
             }
         };
 
-        // Global access for HTML onclick
-        window.aiAssistant = aiAssistant;
         window.EventModal = EventModal;
-
-        // Start
+        window.aiAssistant = aiAssistant;
         App.init();
     </script>
 </body>
