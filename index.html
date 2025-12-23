@@ -148,9 +148,15 @@
             font-weight: bold; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
         .color-dot-select.selected { border-color: white; transform: scale(1.1); }
-        /* Add Button */
         .add-color-btn { border: 2px dashed gray; font-size: 1.5rem; color: gray; position: relative; overflow: hidden; }
         #custom-color-picker { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        
+        /* Delete Icon */
+        .color-delete-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,69,58,0.8); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+        }
 
         .ai-fab { position: absolute; bottom: 30px; right: 20px; width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #bf5af2, #5e5ce6); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 1.5rem; color: white; z-index: 700; }
         .ai-chat-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 800; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.3s; }
@@ -175,11 +181,12 @@
         }
         .clock-num.active { background-color: var(--accent-color); font-weight: bold; color: white; }
         
-        /* Minute Ticks */
+        /* Minute Ticks (60 units) */
         .clock-tick {
             position: absolute; width: 2px; height: 6px; background: rgba(255,255,255,0.2);
             top: 50%; left: 50%; transform-origin: center;
         }
+        .clock-tick.major { height: 10px; background: rgba(255,255,255,0.6); width: 3px; }
         
         .clock-hand { position: absolute; top: 50%; left: 50%; width: 2px; height: 110px; background: var(--accent-color); transform-origin: bottom center; transform: translate(-50%, -100%) rotate(0deg); }
         .clock-center-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5rem; font-weight: bold; color: var(--accent-color); opacity: 0.8; z-index: 0; }
@@ -288,6 +295,7 @@
         const API_KEY = "AIzaSyDvWhhjHmRqNOdAUfd0i16qaUL8MaSg0Uc"; 
         
         let GoogleGenerativeAI;
+        // Fix: Use gemini-1.5-flash as it is the current standard. If it fails, check API Key.
         import("https://esm.run/@google/generative-ai").then(module => { GoogleGenerativeAI = module.GoogleGenerativeAI; }).catch(err => console.log("AI Offline"));
 
         const Translations = {
@@ -488,7 +496,7 @@
         };
 
         const Modal = {
-            currentId: null, startH: 0, startM: 0, endH: 0, endM: 0, selectedColor: '',
+            currentId: null, startH: 0, startM: 0, endH: 0, endM: 0, selectedColor: '', deletingIndex: -1,
             open(id, hour) {
                 document.getElementById('event-modal').classList.add('open');
                 const btnSave = document.getElementById('modal-save-btn'); const titleEl = document.getElementById('modal-title');
@@ -504,6 +512,7 @@
                     this.setTime('start', hour||12, 0); this.setTime('end', (hour||12)+1, 0); this.selectedColor = Store.data.colors[0];
                     btnSave.innerText = Utils.t('done'); titleEl.innerText = Utils.t('event');
                 }
+                this.deletingIndex = -1; // Reset delete state
                 this.renderColors(); this.updateColorUI();
             },
             close() { document.getElementById('event-modal').classList.remove('open'); },
@@ -526,21 +535,38 @@
                 const cList = document.getElementById('color-list'); cList.innerHTML = ''; 
                 Store.data.colors.forEach((c, idx) => { 
                     const d = document.createElement('div'); d.className = 'color-dot-select clickable'; d.style.background = c; 
-                    d.onclick = (e) => { e.stopPropagation(); 
-                        if(this.selectedColor === c) { // Second click logic
-                            if(idx >= 5) {
-                                // Deletion mode
-                                if(d.classList.contains('deleting')) {
-                                    Store.data.colors.splice(idx, 1); Store.save(); this.selectedColor = Store.data.colors[0]; this.renderColors(); this.updateColorUI();
+                    
+                    // Logic: Select -> Show Delete Icon -> Delete
+                    d.onclick = (e) => { 
+                        e.stopPropagation(); 
+                        if (this.selectedColor === c) {
+                            // Already selected
+                            if (idx >= 5) { // Only delete custom colors
+                                if (this.deletingIndex === idx) {
+                                    // Confirm Delete
+                                    Store.data.colors.splice(idx, 1); Store.save(); 
+                                    this.selectedColor = Store.data.colors[0]; 
+                                    this.deletingIndex = -1;
+                                    this.renderColors(); this.updateColorUI();
                                 } else {
-                                    d.classList.add('deleting'); d.innerHTML = `<span class="color-delete-btn">×</span>`;
+                                    // Enter Delete Mode
+                                    this.deletingIndex = idx;
+                                    this.renderColors(); // Re-render to show icon
                                 }
                             }
                         } else { 
-                            this.selectedColor = c; this.updateColorUI(); 
+                            // Select new color
+                            this.selectedColor = c; 
+                            this.deletingIndex = -1; // Reset delete mode
+                            this.updateColorUI(); 
                         } 
                     }; 
-                    if(this.selectedColor === c && !d.classList.contains('deleting')) d.innerHTML = `✓`;
+                    
+                    if (this.deletingIndex === idx) {
+                        d.innerHTML = `<div class="color-delete-overlay">🗑️</div>`; // Trash Icon
+                    } else if (this.selectedColor === c) {
+                        d.innerHTML = `✓`;
+                    }
                     cList.appendChild(d); 
                 }); 
                 const add = document.createElement('div'); add.className = 'color-dot-select add-color-btn clickable'; add.innerText = '+'; add.innerHTML += `<input type="color" id="custom-color-picker">`;
@@ -568,17 +594,18 @@
                 } else {
                     // Minute View: 60 ticks
                     for(let i=0; i<60; i++) {
-                        const tick = document.createElement('div'); tick.className = 'clock-tick';
+                        const tick = document.createElement('div'); tick.className = `clock-tick ${i%5===0?'major':''}`;
                         tick.style.transform = `translate(-50%, -50%) rotate(${i*6}deg) translateY(-110px)`;
-                        if(i%5===0) tick.style.height = '10px'; // Major ticks
                         face.appendChild(tick);
                     }
                 }
 
                 const handle = (e, isEnd = false) => {
                     e.preventDefault(); const rect = face.getBoundingClientRect();
+                    // Fix: Use changedTouches if touches is empty (on touchend)
                     const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
                     const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
+                    
                     const x = clientX - (rect.left+140); const y = clientY - (rect.top+140);
                     let deg = Math.atan2(y, x) * (180/Math.PI) + 90; if(deg<0) deg+=360;
                     
@@ -644,7 +671,7 @@
             completeTodo(id) { const e = Store.data.events.find(x => x.id === id); if(e) { e.completed = true; e.reminder = false; Store.save(); this.renderTodo(); App.render(); } }
         };
 
-        const AIChat = { /* Same logic */
+        const AIChat = { 
             open() { if(!GoogleGenerativeAI) { alert("AI Loading..."); return; } document.getElementById('ai-chat-view').classList.add('open'); document.getElementById('chat-messages').innerHTML = '<div class="msg-bubble msg-ai">Hi! I can help you find a time slot.</div>'; },
             close() { document.getElementById('ai-chat-view').classList.remove('open'); },
             async send() {
@@ -652,7 +679,8 @@
                 document.getElementById('chat-messages').innerHTML += `<div class="msg-bubble msg-user">${text}</div>`;
                 document.getElementById('ai-msg-input').value = '';
                 try {
-                    const genAI = new GoogleGenerativeAI(API_KEY); const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+                    // Update model to gemini-1.5-flash
+                    const genAI = new GoogleGenerativeAI(API_KEY); const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                     const weekEvents = Store.getEvents(App.date).map(e => `${new Date(e.start).getHours()}:${new Date(e.start).getMinutes()}-${new Date(e.end).getHours()}:${new Date(e.end).getMinutes()}`).join(',');
                     const res = await model.generateContent(`Find free slot for: "${text}". Schedule: ${weekEvents}. Return JSON: { "reply": "...", "slot": { "dayOffset": 0, "h": 14, "m": 0 } }`);
                     const json = JSON.parse(res.response.text().match(/\{.*\}/s)[0]);
