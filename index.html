@@ -16,7 +16,10 @@
             --text-secondary: #8e8e93;
             --accent-color: #0a84ff;
             --danger-color: #ff453a;
+            --warning-color: #ff9f0a;
+            --success-color: #30d158;
             --ai-color: #bf5af2;
+            --reminder-glow: rgba(255, 69, 58, 0.6); /* 淡紅色光暈 */
             --safe-top: env(safe-area-inset-top, 20px);
             --safe-bottom: env(safe-area-inset-bottom, 20px);
             --header-height: 50px;
@@ -80,8 +83,19 @@
         #day-scroll { overflow-y: auto; height: calc(100% - 60px); position: relative; -webkit-overflow-scrolling: touch; }
         .timeline-container { position: relative; width: 100%; height: 1440px; transition: height 0.1s linear; }
         .hour-mark { position: absolute; left: 10px; width: 100%; color: var(--text-secondary); font-size: 0.8rem; border-top: 0.5px solid rgba(255,255,255,0.1); }
-        .event-block { position: absolute; left: 60px; right: 10px; border-radius: 8px; padding: 8px; overflow: hidden; font-size: 0.9rem; font-weight: 500; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: center; }
-        .event-block.reminder-on { border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        
+        /* Event Block Styles */
+        .event-block { 
+            position: absolute; left: 60px; right: 10px; border-radius: 8px; padding: 8px; 
+            overflow: hidden; font-size: 0.9rem; font-weight: 500; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: center;
+            transition: transform 0.2s ease, border 0.3s ease, background 0.3s, opacity 0.3s;
+        }
+        /* Reminder ON: Pale Red Outline */
+        .event-block.reminder-on { border: 2px solid var(--reminder-glow); box-shadow: 0 0 10px var(--reminder-glow); }
+        /* Completed: Black Transparent */
+        .event-block.completed { background: rgba(0,0,0,0.6) !important; border: 1px solid rgba(255,255,255,0.1); opacity: 0.6; color: #888; text-decoration: line-through; }
+
         .event-actions { position: absolute; right: 10px; top: 0; bottom: 0; display: flex; align-items: center; gap: 10px; transform: translateX(150%); transition: transform 0.3s ease; }
         .event-block.swiped .event-content { transform: translateX(-120px); }
         .event-block.swiped .event-actions { transform: translateX(0); }
@@ -106,11 +120,31 @@
         #settings-root { transform: translateX(0); z-index: 500; }
         .sub-page { transform: translateX(100%); z-index: 501; }
         .sub-page.active { transform: translateX(0); }
+        
         .list-item { background: var(--surface-light); padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .list-item:active { background: rgba(255,255,255,0.15); }
         .setting-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: white; padding-left: 10px; }
         .check-icon { display: inline-block; width: 24px; visibility: hidden; color: var(--accent-color); font-weight: bold; font-size: 1.2rem; margin-right: 10px; }
         .checked .check-icon { visibility: visible; }
+
+        /* To-Do List Styles */
+        .todo-item {
+            position: relative; background: var(--surface-light); border-radius: 10px; margin-bottom: 15px;
+            padding: 15px; min-height: 80px; display: flex; flex-direction: column; justify-content: center;
+            overflow: hidden;
+        }
+        .todo-date { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px; }
+        .todo-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; }
+        .todo-time { font-size: 0.9rem; opacity: 0.8; }
+        
+        .todo-actions-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            display: flex; align-items: center; justify-content: center; gap: 15px;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .todo-actions-overlay.show { opacity: 1; pointer-events: auto; }
+        .btn-todo-action { padding: 10px 20px; border-radius: 20px; border: none; font-weight: bold; color: white; font-size: 0.9rem; }
 
         /* Modal */
         .modal { position: fixed; bottom: 0; left: 0; width: 100%; height: 92%; background: var(--surface-color); border-radius: 20px 20px 0 0; z-index: 600; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; }
@@ -134,15 +168,12 @@
         .ai-btn-group { display: flex; gap: 10px; margin-top: 10px; }
         .btn-ai-action { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; }
 
-        /* Clock Picker */
         .clock-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .clock-overlay.open { opacity: 1; pointer-events: auto; }
         .clock-face { width: 280px; height: 280px; background: var(--surface-light); border-radius: 50%; position: relative; margin: 20px; touch-action: none; }
         .clock-num { position: absolute; width: 40px; height: 40px; text-align: center; line-height: 40px; color: white; transform: translate(-50%, -50%); border-radius: 50%; transition: background 0.1s ease; }
         .clock-num.active { background-color: var(--accent-color); font-weight: bold; color: white; }
-        
-        /* 手機拖動時指針不加動畫(跟隨手指)，放開後加動畫(彈跳) */
-        .clock-hand { position: absolute; top: 50%; left: 50%; width: 2px; height: 110px; background: var(--accent-color); transform-origin: bottom center; transform: translate(-50%, -100%) rotate(0deg); }
+        .clock-hand { position: absolute; top: 50%; left: 50%; width: 2px; height: 110px; background: var(--accent-color); transform-origin: bottom center; transform: translate(-50%, -100%) rotate(0deg); transition: transform 0.1s cubic-bezier(0.4, 2.08, 0.55, 0.44); }
         .clock-center-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5rem; font-weight: bold; color: var(--accent-color); opacity: 0.8; z-index: 0; }
         .btn-done { color: var(--accent-color); font-weight: 600; font-size: 1.1rem; }
         .btn-cancel { color: var(--danger-color); font-size: 1.1rem; }
@@ -165,19 +196,29 @@
         <div class="sidebar" id="sidebar">
             <div class="settings-page" id="settings-root">
                 <div class="setting-header" data-t="settings">Settings</div>
+                <div class="list-item" onclick="Settings.nav('todo')"><span data-t="todo">To-Do List</span> <span>›</span></div>
                 <div class="list-item" onclick="Settings.nav('lang')"><span data-t="lang">Language</span> <span>›</span></div>
                 <div class="list-item" onclick="Settings.nav('sound')"><span data-t="ringtone">Ringtone</span> <span>›</span></div>
             </div>
+            
+            <div class="settings-page sub-page" id="settings-todo" style="overflow-y:auto;">
+                <div class="nav-btn" onclick="Settings.back()" style="display:block; margin-bottom:20px;">← <span data-t="back">Back</span></div>
+                <div class="setting-header" data-t="todo">To-Do List</div>
+                <div id="todo-container" style="padding-bottom:40px;">
+                    </div>
+            </div>
+
             <div class="settings-page sub-page" id="settings-lang">
                 <div class="nav-btn" onclick="Settings.back()" style="display:block; margin-bottom:20px;">← <span data-t="back">Back</span></div>
                 <div class="setting-header" data-t="lang">Language</div>
                 <div class="list-item" id="opt-lang-en" onclick="Settings.setLang('en')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>English</span></div></div>
                 <div class="list-item" id="opt-lang-zh" onclick="Settings.setLang('zh')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>繁體中文</span></div></div>
             </div>
+
             <div class="settings-page sub-page" id="settings-sound">
                 <div class="nav-btn" onclick="Settings.back()" style="display:block; margin-bottom:20px;">← <span data-t="back">Back</span></div>
                 <div class="setting-header" data-t="ringtone">Ringtone</div>
-                <div style="padding:15px; color:gray; font-size:0.8rem; line-height:1.4;">Web Apps cannot access iPhone system ringtones. Please upload a file.</div>
+                <div style="padding:15px; color:gray; font-size:0.8rem; line-height:1.4;">Web Apps cannot access iPhone system ringtones. Using high-quality synth tones.</div>
                 <div style="padding: 20px 0;"><label class="form-label">Volume</label><input type="range" id="vol-slider" min="0" max="1" step="0.1" style="width:100%"></div>
                 <div class="list-item" id="opt-tone-Beep" onclick="Settings.setTone('Beep')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>Beep (Default)</span></div></div>
                 <div class="list-item" id="opt-tone-Chime" onclick="Settings.setTone('Chime')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>Chime</span></div></div>
@@ -189,8 +230,8 @@
         <div class="modal" id="event-modal">
             <div class="modal-header">
                 <span class="nav-btn" onclick="Modal.close()" data-t="cancel" style="font-size:1rem; color:var(--danger-color)">Cancel</span>
-                <span style="font-weight:600" data-t="event">Event</span>
-                <span class="nav-btn" onclick="Modal.save()" data-t="done" style="font-size:1rem;">Done</span>
+                <span style="font-weight:600" id="modal-title" data-t="event">Event</span>
+                <span class="nav-btn" onclick="Modal.save()" id="modal-save-btn" data-t="done" style="font-size:1rem;">Done</span>
             </div>
             <div class="modal-body">
                 <input type="text" id="evt-title" class="form-input" placeholder="Title">
@@ -231,8 +272,8 @@
         import("https://esm.run/@google/generative-ai").then(module => { GoogleGenerativeAI = module.GoogleGenerativeAI; }).catch(err => console.log("AI Offline"));
 
         const Translations = {
-            en: { calendar: "Calendar", settings: "Settings", lang: "Language", ringtone: "Ringtone", back: "Back", event: "Event", done: "Done", cancel: "Cancel", startTime: "Start Time", endTime: "End Time", repeat: "Repeat Weekly", endDate: "End Date", color: "Color", notes: "Notes", next: "Next", dayView: "Day View", weekView: "Week View", monthView: "Month View" },
-            zh: { calendar: "行事曆", settings: "設定", lang: "語言", ringtone: "鈴聲", back: "返回", event: "行程", done: "完成", cancel: "取消", startTime: "開始時間", endTime: "結束時間", repeat: "每週重複", endDate: "結束日期", color: "顏色", notes: "備註", next: "下一步", dayView: "本日行程", weekView: "週檢視", monthView: "月曆" }
+            en: { calendar: "Calendar", settings: "Settings", lang: "Language", ringtone: "Ringtone", todo: "To-Do List", back: "Back", event: "Event", done: "Done", update: "Update", cancel: "Cancel", startTime: "Start Time", endTime: "End Time", repeat: "Repeat Weekly", endDate: "End Date", color: "Color", notes: "Notes", next: "Next", dayView: "Day View", weekView: "Week View", monthView: "Month View", completed: "Completed", close: "Close" },
+            zh: { calendar: "行事曆", settings: "設定", lang: "語言", ringtone: "鈴聲", todo: "待辦清單", back: "返回", event: "行程", done: "完成", update: "更新", cancel: "取消", startTime: "開始時間", endTime: "結束時間", repeat: "每週重複", endDate: "結束日期", color: "顏色", notes: "備註", next: "下一步", dayView: "本日行程", weekView: "週檢視", monthView: "月曆", completed: "已完成", close: "關閉" }
         };
 
         const Store = {
@@ -269,12 +310,26 @@
         const Utils = {
             pad(n) { return n < 10 ? '0'+n : n; },
             formatTime(d) { return `${this.pad(d.getHours())}:${this.pad(d.getMinutes())}`; },
-            t(key) { return Translations[Store.data.settings.lang || 'zh'][key] || key; }
+            t(key) { return Translations[Store.data.settings.lang || 'zh'][key] || key; },
+            playTone() {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                const type = Store.data.settings.tone;
+                osc.type = type === 'Chime' ? 'triangle' : 'sine';
+                osc.frequency.setValueAtTime(type === 'Chime' ? 660 : 880, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 1);
+                gain.gain.value = Store.data.settings.vol || 0.8;
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + 1.5);
+            }
         };
 
         const App = {
             view: 'month', date: new Date(), zoom: 60,
-            init() { Store.init(); this.updateLang(); this.render(); this.bindGlobal(); Settings.updateUI(); },
+            init() { 
+                Store.init(); this.updateLang(); this.render(); this.bindGlobal(); Settings.updateUI(); 
+                setInterval(() => this.checkReminders(), 15000);
+            },
             bindGlobal() {
                 document.getElementById('nav-left').onclick = () => this.nav('left');
                 document.getElementById('nav-right').onclick = () => this.nav('next');
@@ -285,6 +340,22 @@
                 let startX = 0;
                 document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
                 document.addEventListener('touchmove', e => { if(this.view === 'month' && startX < 30 && e.touches[0].clientX - startX > 50) Settings.open(); });
+            },
+            checkReminders() {
+                const now = new Date();
+                Store.data.events.forEach(e => {
+                    if(e.reminder && !e.completed) {
+                        const start = new Date(e.start);
+                        const isToday = e.repeat ? (start.getDay() === now.getDay()) : (start.toDateString() === now.toDateString());
+                        if(isToday && start.getHours() === now.getHours() && start.getMinutes() === now.getMinutes()) {
+                            if(!e.lastNotified || (now.getTime() - e.lastNotified > 60000)) {
+                                Utils.playTone();
+                                alert(`🔔 Reminder: ${e.title} \n ${Utils.formatTime(start)}`);
+                                e.lastNotified = now.getTime(); Store.save();
+                            }
+                        }
+                    }
+                });
             },
             updateLang() { document.querySelectorAll('[data-t]').forEach(el => { el.innerText = Utils.t(el.getAttribute('data-t')); }); document.getElementById('evt-title').placeholder = Utils.t('event'); },
             nav(action) {
@@ -309,7 +380,7 @@
                 for(let i=1; i<=total; i++) {
                     const el = document.createElement('div'); el.className = 'day-cell'; if(i === new Date().getDate() && m === new Date().getMonth()) el.classList.add('today');
                     el.innerHTML = `<div class="day-num">${i}</div><div class="dots"></div>`;
-                    Store.getEvents(new Date(y, m, i)).slice(0,3).forEach(e => { const d = document.createElement('div'); d.className='dot'; d.style.background = e.color; el.querySelector('.dots').appendChild(d); });
+                    Store.getEvents(new Date(y, m, i)).slice(0,3).forEach(e => { if(!e.completed) { const d = document.createElement('div'); d.className='dot'; d.style.background = e.color; el.querySelector('.dots').appendChild(d); } });
                     el.onclick = () => this.setView('week', new Date(y, m, i)); grid.appendChild(el);
                 }
                 container.appendChild(grid);
@@ -327,7 +398,9 @@
                     const d = new Date(start); d.setDate(d.getDate() + i); const dayCol = document.createElement('div'); dayCol.className = 'week-day-column'; dayCol.onclick = () => this.setView('day', d);
                     Store.getEvents(d).forEach(e => {
                         const s = new Date(e.repeat?d:e.start); const hrs = new Date(e.start).getHours(); const mins = new Date(e.start).getMinutes(); const durH = (new Date(e.end) - new Date(e.start))/3600000;
-                        const blk = document.createElement('div'); blk.className = 'week-event-block'; blk.style.top = ((hrs + mins/60)/24)*100 + '%'; blk.style.height = (durH/24)*100 + '%'; blk.style.background = e.color; dayCol.appendChild(blk);
+                        const blk = document.createElement('div'); blk.className = 'week-event-block'; blk.style.top = ((hrs + mins/60)/24)*100 + '%'; blk.style.height = (durH/24)*100 + '%'; blk.style.background = e.completed ? 'rgba(0,0,0,0.5)' : e.color;
+                        if(e.completed) blk.style.border = '1px solid rgba(255,255,255,0.1)';
+                        dayCol.appendChild(blk);
                     });
                     gridCol.appendChild(dayCol);
                 }
@@ -344,8 +417,28 @@
                     const s = new Date(e.repeat?this.date:e.start); const realStart = new Date(e.start); s.setHours(realStart.getHours(), realStart.getMinutes());
                     const end = new Date(s); const realEnd = new Date(e.end); end.setHours(realEnd.getHours(), realEnd.getMinutes());
                     const top = (s.getHours() + s.getMinutes()/60) * this.zoom; const height = Math.max(((end - s) / 3600000) * this.zoom, 30);
-                    const el = document.createElement('div'); el.className = `event-block ${e.reminder ? 'reminder-on' : ''}`; el.style.top = top + 'px'; el.style.height = height + 'px'; el.style.background = e.color;
-                    el.innerHTML = `<div class="event-content"><div>${e.title}</div><div style="font-size:0.8rem; opacity:0.8">${Utils.formatTime(s)} - ${Utils.formatTime(end)}</div></div>`;
+                    const el = document.createElement('div'); 
+                    el.className = `event-block ${e.reminder && !e.completed ? 'reminder-on' : ''} ${e.completed ? 'completed' : ''}`; 
+                    el.style.top = top + 'px'; el.style.height = height + 'px'; el.style.background = e.color;
+                    el.innerHTML = `
+                        <div class="event-content"><div>${e.title}</div><div style="font-size:0.8rem; opacity:0.8">${Utils.formatTime(s)} - ${Utils.formatTime(end)}</div></div>
+                        <div class="event-actions"><div class="action-btn btn-edit">Edit</div><div class="action-btn btn-delete">Del</div></div>`;
+                    
+                    let ts = 0; let lpTimer;
+                    el.addEventListener('touchstart', ev => { 
+                        ts = ev.touches[0].clientX; 
+                        lpTimer = setTimeout(() => { 
+                            e.reminder = !e.reminder; Store.save(); this.render(); 
+                            if(navigator.vibrate) navigator.vibrate(50);
+                        }, 1000); 
+                    });
+                    el.addEventListener('touchend', ev => { 
+                        clearTimeout(lpTimer); 
+                        const diff = ts - ev.changedTouches[0].clientX;
+                        if(diff > 60) el.classList.add('swiped'); else if (diff < -60) el.classList.remove('swiped');
+                    });
+                    el.querySelector('.btn-edit').onclick = (stop) => { stop.stopPropagation(); Modal.open(e.id); };
+                    el.querySelector('.btn-delete').onclick = (stop) => { stop.stopPropagation(); Modal.delete(e.id); };
                     timeline.appendChild(el);
                 });
                 timeline.onclick = (e) => { if(e.target === timeline) { const h = Math.floor((e.clientY - timeline.getBoundingClientRect().top)/this.zoom); Modal.open(null, h); } };
@@ -357,22 +450,35 @@
             currentId: null, startH: 0, startM: 0, endH: 0, endM: 0, selectedColor: '',
             open(id, hour) {
                 document.getElementById('event-modal').classList.add('open');
-                if(id) { /* Edit Logic Omitted */ } else {
+                const btnSave = document.getElementById('modal-save-btn'); const titleEl = document.getElementById('modal-title');
+                if(id) { 
+                    this.currentId = id; const evt = Store.data.events.find(e => e.id === id);
+                    document.getElementById('evt-title').value = evt.title; document.getElementById('evt-desc').value = evt.desc||'';
+                    document.getElementById('evt-repeat').checked = evt.repeat; document.getElementById('evt-repeat-end').value = evt.repeatEnd||'';
+                    document.getElementById('repeat-end-row').classList.toggle('hidden', !evt.repeat);
+                    const s = new Date(evt.start); const e = new Date(evt.end); this.setTime('start', s.getHours(), s.getMinutes()); this.setTime('end', e.getHours(), e.getMinutes()); this.selectedColor = evt.color;
+                    btnSave.innerText = Utils.t('update'); titleEl.innerText = "Edit Event";
+                } else {
                     this.currentId = null; document.getElementById('evt-title').value=''; document.getElementById('evt-desc').value=''; document.getElementById('evt-repeat').checked=false;
                     this.setTime('start', hour||12, 0); this.setTime('end', (hour||12)+1, 0); this.selectedColor = Store.data.colors[0];
+                    btnSave.innerText = Utils.t('done'); titleEl.innerText = Utils.t('event');
                 }
                 this.renderColors(); this.updateColorUI();
             },
             close() { document.getElementById('event-modal').classList.remove('open'); },
+            delete(id) { Store.data.events = Store.data.events.filter(e => e.id !== id); Store.save(); App.render(); },
             save() { 
                 const title = document.getElementById('evt-title').value || Utils.t('event');
                 const s = new Date(App.date); s.setHours(this.startH, this.startM); const e = new Date(App.date); e.setHours(this.endH, this.endM);
-                
-                // ★★★ TIME CHECK ★★★
                 if(s >= e) { alert("Start time cannot be later than End time!"); return; }
-
-                const evt = { id: Date.now().toString(), title, start: s.toISOString(), end: e.toISOString(), color: this.selectedColor, repeat: document.getElementById('evt-repeat').checked, desc: document.getElementById('evt-desc').value };
-                Store.data.events.push(evt); Store.save(); this.close(); App.render();
+                const evt = { 
+                    id: this.currentId || Date.now().toString(), title, start: s.toISOString(), end: e.toISOString(), color: this.selectedColor, 
+                    repeat: document.getElementById('evt-repeat').checked, repeatEnd: document.getElementById('evt-repeat-end').value, 
+                    desc: document.getElementById('evt-desc').value, reminder: this.currentId ? Store.data.events.find(x=>x.id===this.currentId).reminder : false,
+                    completed: false
+                };
+                if(this.currentId) Store.data.events[Store.data.events.findIndex(x=>x.id===this.currentId)] = evt; else Store.data.events.push(evt);
+                Store.save(); this.close(); App.render();
             },
             setTime(type, h, m) { if(type === 'start') { this.startH = h; this.startM = m; } else { this.endH = h; this.endM = m; } document.getElementById(`display-${type}`).innerText = `${Utils.pad(h)}:${Utils.pad(m)}`; },
             renderColors() { 
@@ -402,63 +508,67 @@
                     const rad = ((i*30)-90) * (Math.PI/180);
                     num.style.left = (140 + r*Math.cos(rad)) + 'px'; num.style.top = (140 + r*Math.sin(rad)) + 'px'; num.innerText = show; face.appendChild(num);
                 }
-                
-                // Hand transition control
-                const hand = document.getElementById('clock-hand');
-                const setTransition = (enable) => { hand.style.transition = enable ? 'transform 0.1s cubic-bezier(0.4, 2.08, 0.55, 0.44)' : 'none'; };
-
                 const handle = (e, isEnd = false) => {
                     e.preventDefault(); const rect = face.getBoundingClientRect();
                     const x = (e.touches?e.touches[0].clientX:e.clientX) - (rect.left+140); const y = (e.touches?e.touches[0].clientY:e.clientY) - (rect.top+140);
                     let deg = Math.atan2(y, x) * (180/Math.PI) + 90; if(deg<0) deg+=360;
-                    
-                    const step = this.mode === 'hour' ? 30 : 6;
-                    const snapped = Math.round(deg / step) * step;
-                    
-                    if(!isEnd) setTransition(false); else setTransition(true);
-                    
+                    const step = this.mode === 'hour' ? 30 : 6; const snapped = Math.round(deg / step) * step;
+                    const hand = document.getElementById('clock-hand');
+                    hand.style.transition = isEnd ? 'transform 0.2s cubic-bezier(0.4, 2, 0.55, 0.44)' : 'none';
                     hand.style.transform = `translate(-50%,-100%) rotate(${snapped}deg)`;
-                    
                     let val = this.mode==='hour' ? Math.round(snapped/30)||12 : Math.round(snapped/6)%60;
                     if(this.mode==='hour') this.valH=val; else this.valM=val;
-                    
                     document.querySelectorAll('.clock-num').forEach(e => e.classList.remove('active'));
                     let anchor = this.mode==='hour' ? val : Math.round(val/5); if(anchor===0) anchor=12;
                     const t = document.getElementById('c'+anchor); if(t) t.classList.add('active');
                     document.getElementById('clock-center-display').innerText = this.mode==='hour'?val:Utils.pad(val);
                 };
-                
-                face.ontouchstart = (e) => handle(e, false);
-                face.ontouchmove = (e) => handle(e, false);
-                face.ontouchend = (e) => handle(e, true);
-                
-                // Initial set
-                setTransition(true);
-                handle({preventDefault:()=>{}, touches:[{clientX: face.getBoundingClientRect().left+140, clientY: face.getBoundingClientRect().top}] }, true); // Dummy init
+                face.ontouchmove = (e) => handle(e, false); face.ontouchend = (e) => handle(e, true); face.onmousedown = () => face.onmousemove = (e)=>handle(e,false); face.onmouseup = (e) => { handle(e,true); face.onmousemove=null; };
             }
         };
 
         const Settings = {
             open() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-backdrop').classList.add('open'); this.updateUI(); },
             close() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-backdrop').classList.remove('open'); },
-            nav(page) { document.getElementById('settings-'+page).classList.add('active'); },
+            nav(page) { document.getElementById('settings-'+page).classList.add('active'); if(page==='todo') this.renderTodo(); },
             back() { document.querySelectorAll('.sub-page').forEach(e => e.classList.remove('active')); },
             setLang(l) { Store.data.settings.lang = l; Store.save(); App.updateLang(); App.render(); this.updateUI(); },
-            setTone(t) { Store.data.settings.tone = t; Store.save(); this.updateUI(); },
+            setTone(t) { Store.data.settings.tone = t; Store.save(); Settings.updateUI(); },
             uploadTone(input) { if(input.files[0]) alert("Custom tone uploaded!"); },
             updateUI() {
                 document.querySelectorAll('.check-icon').forEach(e => e.parentElement.parentElement.classList.remove('checked'));
                 const l = Store.data.settings.lang || 'zh'; const lEl = document.getElementById('opt-lang-'+l); if(lEl) lEl.classList.add('checked');
                 const t = Store.data.settings.tone || 'Beep'; const tEl = document.getElementById('opt-tone-'+t); if(tEl) tEl.classList.add('checked');
+            },
+            renderTodo() {
+                const container = document.getElementById('todo-container'); container.innerHTML = '';
+                const todos = Store.data.events.filter(e => e.reminder && !e.completed).sort((a,b) => new Date(a.start) - new Date(b.start));
+                if(todos.length === 0) { container.innerHTML = '<div style="text-align:center;color:gray;margin-top:20px;">No reminders</div>'; return; }
+                
+                todos.forEach(e => {
+                    const el = document.createElement('div'); el.className = 'todo-item';
+                    el.innerHTML = `
+                        <div class="todo-date">${new Date(e.start).toLocaleDateString()}</div>
+                        <div class="todo-title">${e.title}</div>
+                        <div class="todo-time">${Utils.formatTime(new Date(e.start))} - ${Utils.formatTime(new Date(e.end))}</div>
+                        <div class="todo-actions-overlay">
+                            <button class="btn-todo-action" style="background:var(--success-color);" onclick="Settings.completeTodo('${e.id}')">${Utils.t('completed')}</button>
+                            <button class="btn-todo-action" style="background:rgba(255,255,255,0.2);" onclick="this.parentElement.classList.remove('show')">${Utils.t('close')}</button>
+                        </div>
+                    `;
+                    el.style.borderLeft = `5px solid ${e.color}`;
+                    el.onclick = () => el.querySelector('.todo-actions-overlay').classList.add('show');
+                    container.appendChild(el);
+                });
+            },
+            completeTodo(id) {
+                const e = Store.data.events.find(x => x.id === id);
+                if(e) { e.completed = true; e.reminder = false; Store.save(); this.renderTodo(); App.render(); }
             }
         };
 
-        const AIChat = { /* Omitted for brevity, logic remains the same */ 
-            open() { 
-                if(!GoogleGenerativeAI) { alert("AI Loading..."); return; }
-                document.getElementById('ai-chat-view').classList.add('open'); 
-                document.getElementById('chat-messages').innerHTML = '<div class="msg-bubble msg-ai">Hi! I can help you find a time slot.</div>';
-            },
+        const AIChat = { /* Same logic */
+            open() { if(!GoogleGenerativeAI) { alert("AI Loading..."); return; } document.getElementById('ai-chat-view').classList.add('open'); document.getElementById('chat-messages').innerHTML = '<div class="msg-bubble msg-ai">Hi! I can help you find a time slot.</div>'; },
             close() { document.getElementById('ai-chat-view').classList.remove('open'); },
             async send() {
                 const text = document.getElementById('ai-msg-input').value; if(!text) return;
