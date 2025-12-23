@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <title>Deep Dark Calendar</title>
+    <title>Deep Dark Calendar Fixed</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -26,7 +26,8 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-        body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; }
+        /* 禁止整頁橡皮筋效果 */
+        body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; overscroll-behavior: none; position: fixed; }
         input, textarea { font-family: inherit; user-select: text; -webkit-user-select: text; }
         .hidden { display: none !important; }
 
@@ -55,37 +56,71 @@
         .view-container { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             padding-top: calc(var(--header-height) + var(--safe-top));
-            background: var(--bg-color); overflow: hidden; display: flex; flex-direction: column;
+            background: var(--bg-color); 
+            /* 關鍵修改：禁止 View Container 捲動，改由內部元素控制 */
+            overflow: hidden; 
+            display: flex; flex-direction: column;
+            touch-action: pan-x; /* 只允許左右滑動手勢(若有)，禁止上下 */
         }
 
-        /* Calendar Styles */
+        /* Calendar Styles - Modified for Fixed Height */
         .month-large-title { 
             font-size: 2.2rem; font-weight: 800; color: white; padding: 10px 0 5px 0; 
             text-align: center; opacity: 0; animation: fadeIn 0.4s forwards;
+            flex-shrink: 0; /* 防止標題被壓縮 */
         }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 10px; flex: 1; align-content: start; }
-        .weekday-row { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--text-secondary); font-size: 0.8rem; padding: 10px 10px 5px; }
-        .day-cell { height: 11vh; display: flex; flex-direction: column; align-items: center; border-radius: 12px; position: relative; border-top: 0.5px solid rgba(255,255,255,0.05); background: transparent; }
+        
+        .calendar-grid { 
+            display: grid; 
+            grid-template-columns: repeat(7, 1fr); 
+            padding: 5px 10px 20px 10px; 
+            flex: 1; /* 佔滿剩餘空間 */
+            height: 100%; /* 強制高度 */
+            align-content: stretch; /* 拉伸內容以填滿 */
+        }
+        
+        .weekday-row { 
+            display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; 
+            color: var(--text-secondary); font-size: 0.8rem; padding: 10px 10px 5px; 
+            flex-shrink: 0;
+        }
+        
+        /* 關鍵修改：Day Cell 自動彈性高度，不寫死 vh */
+        .day-cell { 
+            display: flex; flex-direction: column; align-items: center; 
+            border-radius: 8px; position: relative; 
+            border-top: 0.5px solid rgba(255,255,255,0.05); 
+            background: transparent; 
+            height: auto; /* 自動 */
+            min-height: 0; /* 允許 Grid 壓縮 */
+        }
         .day-cell.today .day-num { background: transparent; color: var(--danger-color); font-weight: 900; font-size: 1.1rem; text-shadow: 0 0 10px rgba(255, 69, 58, 0.3); }
         .day-num { margin-top: 6px; font-size: 1rem; font-weight: 500; }
         .dots { display: flex; gap: 3px; margin-top: 4px; }
         .dot { width: 5px; height: 5px; border-radius: 50%; }
 
         /* Week & Day Views */
-        .week-view-container { display: flex; height: 100%; width: 100%; flex-direction: column; }
-        .week-header-row { display: grid; grid-template-columns: 40px repeat(7, 1fr); text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
-        .week-body { flex: 1; display: flex; position: relative; overflow: hidden; }
-        .week-time-col { width: 40px; height: 100%; border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: space-between; padding-top: 10px; padding-bottom: 10px; }
+        .week-view-container { display: flex; height: 100%; width: 100%; flex-direction: column; overflow: hidden; }
+        .week-header-row { display: grid; grid-template-columns: 40px repeat(7, 1fr); text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; flex-shrink: 0; background: var(--bg-color); z-index: 10; }
+        
+        /* Week Body - 這裡允許內部捲動時間軸，但不是整頁捲動 */
+        .week-body { 
+            flex: 1; display: flex; position: relative; 
+            overflow-y: auto; /* 只有時間軸區域可以捲動 */
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        .week-time-col { width: 40px; height: 1440px; /* 固定時間軸高度 */ border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: space-between; padding-top: 10px; padding-bottom: 10px; }
         .week-time-label { font-size: 0.6rem; color: var(--text-secondary); text-align: right; padding-right: 5px; transform: translateY(-50%); height: 0; }
-        .week-grid-col { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); height: 100%; position: relative; }
+        .week-grid-col { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); height: 1440px; position: relative; }
         .week-day-column { border-right: 1px solid rgba(255,255,255,0.05); height: 100%; position: relative; }
         .week-event-block { position: absolute; left: 2px; right: 2px; border-radius: 4px; opacity: 0.8; min-height: 2px; }
 
-        .week-strip { display: flex; justify-content: space-around; padding: 10px 0; background: var(--bg-color); border-bottom: 0.5px solid rgba(255,255,255,0.1); z-index: 10; position: relative; }
+        .week-strip { display: flex; justify-content: space-around; padding: 10px 0; background: var(--bg-color); border-bottom: 0.5px solid rgba(255,255,255,0.1); z-index: 10; position: relative; flex-shrink: 0; }
         .strip-day { display: flex; flex-direction: column; align-items: center; padding: 5px 10px; border-radius: 12px; font-size: 0.8rem; color: var(--text-secondary); }
         .strip-day.active { background: var(--surface-color); color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
         
-        #day-scroll { overflow-y: auto; overflow-x: hidden; height: calc(100% - 60px); position: relative; -webkit-overflow-scrolling: touch; touch-action: pan-y; width: 100vw; }
+        #day-scroll { overflow-y: auto; overflow-x: hidden; height: 100%; position: relative; -webkit-overflow-scrolling: touch; touch-action: pan-y; width: 100vw; flex: 1; }
         .timeline-container { position: relative; width: 100%; height: 1440px; transition: height 0.1s linear; }
         .hour-mark { position: absolute; left: 10px; width: 100%; color: var(--text-secondary); font-size: 0.8rem; border-top: 0.5px solid rgba(255,255,255,0.1); }
         
@@ -236,8 +271,8 @@
                 <div style="padding: 20px 0;"><label class="form-label">Volume</label><input type="range" id="vol-slider" min="0" max="1" step="0.1" style="width:100%"></div>
                 <div class="list-item clickable" id="opt-tone-Beep" onclick="Settings.setTone('Beep')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>Beep</span></div></div>
                 <div class="list-item clickable" id="opt-tone-Chime" onclick="Settings.setTone('Chime')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>Chime</span></div></div>
-                <div class="list-item clickable" onclick="document.getElementById('file-upload').click()"><div style="display:flex; align-items:center;"><span class="check-icon"></span><span>Upload Custom (MP3/M4A)</span></div><span>+</span></div>
-                <input type="file" id="file-upload" accept="audio/*, .m4a" style="display:none" onchange="Settings.uploadTone(this)">
+                <div class="list-item clickable" onclick="document.getElementById('file-upload').click()"><div style="display:flex; align-items:center;"><span class="check-icon"></span><span>Upload Custom (MP3/M4A/WAV)</span></div><span>+</span></div>
+                <input type="file" id="file-upload" accept="audio/*" style="display:none" onchange="Settings.uploadTone(this)">
             </div>
         </div>
 
@@ -422,9 +457,18 @@
 
                 const grid = document.createElement('div'); grid.className = 'calendar-grid';
                 const daysHeader = document.createElement('div'); daysHeader.className = 'weekday-row'; ['S','M','T','W','T','F','S'].forEach(d => daysHeader.innerHTML += `<div>${d}</div>`); container.appendChild(daysHeader);
+                
+                // 為了讓 Grid 填滿，我們這裡不使用固定 row 數，而是確保 day-cell 使用 flex 自動分配
                 const y = this.date.getFullYear(), m = this.date.getMonth(); const first = new Date(y, m, 1).getDay(); const total = new Date(y, m+1, 0).getDate();
                 const today = new Date();
-                for(let i=0; i<first; i++) grid.appendChild(document.createElement('div'));
+                
+                // 填充空白
+                for(let i=0; i<first; i++) {
+                    const el = document.createElement('div'); 
+                    el.className = 'day-cell';
+                    grid.appendChild(el);
+                }
+                
                 for(let i=1; i<=total; i++) {
                     const el = document.createElement('div'); el.className = 'day-cell clickable'; 
                     if(i === today.getDate() && m === today.getMonth() && y === today.getFullYear()) el.classList.add('today');
@@ -432,6 +476,15 @@
                     Store.getEvents(new Date(y, m, i)).slice(0,3).forEach(e => { if(!e.completed) { const d = document.createElement('div'); d.className='dot'; d.style.background = e.color; el.querySelector('.dots').appendChild(d); } });
                     el.onclick = () => this.setView('week', new Date(y, m, i)); grid.appendChild(el);
                 }
+                
+                // 確保剩餘格子也佔位，保持佈局
+                const remaining = 42 - (first + total); 
+                if(remaining > 0 && remaining < 14) {
+                    for(let i=0;i<remaining;i++) {
+                        const el = document.createElement('div'); el.className = 'day-cell'; grid.appendChild(el);
+                    }
+                }
+                
                 container.appendChild(grid);
             },
             renderWeek(container) {
@@ -637,45 +690,61 @@
             setLang(l) { Store.data.settings.lang = l; Store.save(); App.updateLang(); App.render(); this.updateUI(); },
             setTone(t) { Store.data.settings.tone = t; Store.save(); Settings.updateUI(); },
             uploadTone(input) { 
-                if(input.files[0]) {
-                    // ★ 鈴聲裁切邏輯 ★
-                    const reader = new FileReader();
-                    reader.onload = async function(e) {
-                        try {
-                            const arrayBuffer = e.target.result;
-                            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                            const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                            
-                            // 裁切前 30 秒
-                            const duration = Math.min(30, decodedBuffer.duration);
-                            const offlineCtx = new OfflineAudioContext(decodedBuffer.numberOfChannels, duration * decodedBuffer.sampleRate, decodedBuffer.sampleRate);
-                            const source = offlineCtx.createBufferSource();
-                            source.buffer = decodedBuffer;
-                            source.connect(offlineCtx.destination);
-                            source.start();
-                            
-                            const renderedBuffer = await offlineCtx.startRendering();
-                            
-                            // 轉成 WAV (簡易版)
-                            const wav = audioBufferToWav(renderedBuffer);
-                            const blob = new Blob([new DataView(wav)], { type: 'audio/wav' });
-                            
-                            // 轉成 Data URL 儲存
-                            const reader2 = new FileReader();
-                            reader2.onload = function(e2) {
-                                Store.data.settings.customTone = e2.target.result;
-                                Store.save();
-                                alert("Ringtone set (First 30s)!");
-                            };
-                            reader2.readAsDataURL(blob);
-                            
-                        } catch (err) {
-                            console.error(err);
-                            alert("Audio processing failed.");
+                const file = input.files[0];
+                if(!file) return;
+
+                // 步驟 1: 嘗試透過 AudioContext 解碼 (這可以處理標準 MP3/WAV 並裁切)
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const arrayBuffer = e.target.result;
+                        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        // 這裡容易在 M4A 失敗
+                        const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                        
+                        // 裁切前 30 秒
+                        const duration = Math.min(30, decodedBuffer.duration);
+                        const offlineCtx = new OfflineAudioContext(decodedBuffer.numberOfChannels, duration * decodedBuffer.sampleRate, decodedBuffer.sampleRate);
+                        const source = offlineCtx.createBufferSource();
+                        source.buffer = decodedBuffer;
+                        source.connect(offlineCtx.destination);
+                        source.start();
+                        
+                        const renderedBuffer = await offlineCtx.startRendering();
+                        
+                        // 轉成 WAV 
+                        const wav = audioBufferToWav(renderedBuffer);
+                        const blob = new Blob([new DataView(wav)], { type: 'audio/wav' });
+                        
+                        // 轉成 Data URL 儲存
+                        const reader2 = new FileReader();
+                        reader2.onload = function(e2) {
+                            Store.data.settings.customTone = e2.target.result;
+                            Store.save();
+                            alert("Ringtone set (Processed & Cropped)!");
+                        };
+                        reader2.readAsDataURL(blob);
+                        
+                    } catch (err) {
+                        console.log("Audio Processing Failed (Codec mismatch?), attempting fallback...", err);
+                        
+                        // 步驟 2 (Fallback): 如果解碼失敗，直接讀取原始檔案 (不裁切，直接存 Base64)
+                        // 限制大小 2.5MB (LocalStorage 上限約 5MB，安全起見)
+                        if (file.size > 2.5 * 1024 * 1024) {
+                            alert("Audio processing failed and file is too large (>2.5MB) for raw storage. Please convert to standard MP3.");
+                            return;
                         }
-                    };
-                    reader.readAsArrayBuffer(input.files[0]);
-                }
+
+                        const rawReader = new FileReader();
+                        rawReader.onload = function(evt) {
+                            Store.data.settings.customTone = evt.target.result;
+                            Store.save();
+                            alert("Ringtone set (Raw mode - Compatibility fallback)!");
+                        };
+                        rawReader.readAsDataURL(file);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
             },
             updateUI() {
                 document.querySelectorAll('.check-icon').forEach(e => e.parentElement.parentElement.classList.remove('checked'));
