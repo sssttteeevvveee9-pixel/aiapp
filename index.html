@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <title>Deep Dark Calendar</title>
+    <title>Deep Dark Calendar Fixed Color</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -25,18 +25,17 @@
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, sans-serif;
         }
 
-        /* ★ 核心修正：全域禁止長按選取與系統選單 ★ */
+        /* ★ 全域禁止選取與長按 ★ */
         * { 
             box-sizing: border-box; 
             -webkit-tap-highlight-color: transparent; 
             user-select: none; 
-            -webkit-user-select: none; /* 禁止選取文字 */
-            -webkit-touch-callout: none; /* 禁止長按跳出系統選單/放大鏡 */
+            -webkit-user-select: none; 
+            -webkit-touch-callout: none; 
         }
         
         body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; }
         
-        /* 例外：輸入框允許選字 */
         input, textarea { 
             font-family: inherit; 
             user-select: text; 
@@ -112,7 +111,6 @@
             touch-action: pan-x;
         }
         .event-block.reminder-on { border: 2px solid var(--reminder-border); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
-        /* Bell Icon on Top Right */
         .event-block.reminder-on::after {
             content: '🔔'; position: absolute; top: 2px; right: 4px; font-size: 0.8rem;
             filter: grayscale(1) brightness(2);
@@ -172,8 +170,9 @@
             font-weight: bold; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
         .color-dot-select.selected { border-color: white; transform: scale(1.1); }
+        
+        /* 這裡關鍵：relative 讓內部的 absolute input 可以定位 */
         .add-color-btn { border: 2px dashed gray; font-size: 1.5rem; color: gray; position: relative; overflow: hidden; }
-        #custom-color-picker { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
         
         .color-delete-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -286,8 +285,7 @@
                 <div style="margin:20px 0;"><label class="form-label" data-t="color">Color</label><div id="color-list" style="display:flex; gap:15px; overflow-x:auto; padding:10px 5px; align-items:center;"></div></div>
                 <textarea id="evt-desc" class="form-input" rows="3" placeholder="Notes"></textarea>
                 <div class="ai-fab clickable" onclick="AIChat.open()">✨</div>
-                <input type="color" id="custom-color-picker" style="display:none;">
-            </div>
+                </div>
         </div>
 
         <div class="ai-chat-view" id="ai-chat-view">
@@ -391,16 +389,7 @@
                 document.getElementById('sidebar-backdrop').onclick = () => Settings.close();
                 document.getElementById('evt-repeat').onchange = (e) => { document.getElementById('repeat-end-row').classList.toggle('hidden', !e.target.checked); };
                 
-                const colorInput = document.getElementById('custom-color-picker');
-                if(colorInput) {
-                    colorInput.onchange = (e) => { 
-                        Store.data.colors.push(e.target.value); 
-                        Store.save(); 
-                        Modal.renderColors(); 
-                        Modal.selectedColor = e.target.value; 
-                        Modal.updateColorUI(); 
-                    };
-                }
+                // ★ 這裡移除了舊的 custom-color-picker 監聽，因為我們現在在 Modal.renderColors 動態生成
                 
                 let startX = 0;
                 document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
@@ -456,9 +445,9 @@
 
                 const grid = document.createElement('div'); grid.className = 'calendar-grid';
                 const daysHeader = document.createElement('div'); daysHeader.className = 'weekday-row'; ['S','M','T','W','T','F','S'].forEach(d => daysHeader.innerHTML += `<div>${d}</div>`); container.appendChild(daysHeader);
-                const y = this.date.getFullYear(), m = this.date.getMonth(); const first = new Date(y, m, 1).getDay(); const total = new Date(y, m+1, 0).getDate();
                 
-                const today = new Date(); // Fixed today check
+                const y = this.date.getFullYear(), m = this.date.getMonth(); const first = new Date(y, m, 1).getDay(); const total = new Date(y, m+1, 0).getDate();
+                const today = new Date(); 
                 
                 for(let i=0; i<first; i++) grid.appendChild(document.createElement('div'));
                 for(let i=1; i<=total; i++) {
@@ -513,7 +502,6 @@
                     let ts = 0; let lpTimer;
                     el.addEventListener('touchstart', ev => { 
                         ts = ev.touches[0].clientX; 
-                        // ★ 修正：長按後只改 Class 不 Render (Scroll Jump Fix)
                         lpTimer = setTimeout(() => { 
                             e.reminder = !e.reminder; Store.save(); 
                             if(e.reminder) el.classList.add('reminder-on'); else el.classList.remove('reminder-on');
@@ -575,11 +563,10 @@
                 Store.data.colors.forEach((c, idx) => { 
                     const d = document.createElement('div'); d.className = 'color-dot-select clickable'; d.style.background = c; 
                     
-                    // Logic: Select -> Show Delete Icon -> Delete
                     d.onclick = (e) => { 
                         e.stopPropagation(); 
                         if (this.selectedColor === c) {
-                            if (idx >= 5) { // Only delete custom colors
+                            if (idx >= 5) {
                                 if (this.deletingIndex === idx) {
                                     Store.data.colors.splice(idx, 1); Store.save(); 
                                     this.selectedColor = Store.data.colors[0]; 
@@ -587,26 +574,44 @@
                                     this.renderColors(); this.updateColorUI();
                                 } else {
                                     this.deletingIndex = idx;
-                                    this.renderColors(); // Re-render to show icon
+                                    this.renderColors(); 
                                 }
                             }
                         } else { 
                             this.selectedColor = c; 
-                            this.deletingIndex = -1; // Reset delete mode
+                            this.deletingIndex = -1; 
                             this.updateColorUI(); 
                         } 
                     }; 
                     
                     if (this.deletingIndex === idx) {
-                        d.innerHTML = `<div class="color-delete-overlay">🗑️</div>`; // Trash Icon
+                        d.innerHTML = `<div class="color-delete-overlay">🗑️</div>`; 
                     } else if (this.selectedColor === c) {
                         d.innerHTML = `✓`;
                     }
                     cList.appendChild(d); 
                 }); 
-                const add = document.createElement('div'); add.className = 'color-dot-select add-color-btn clickable'; add.innerText = '+'; 
-                // Fix: Inline onclick to trigger hidden input
-                add.onclick = () => document.getElementById('custom-color-picker').click();
+                
+                // ★ 關鍵修正：重寫 "+" 按鈕邏輯
+                const add = document.createElement('div'); 
+                add.className = 'color-dot-select add-color-btn clickable'; 
+                add.innerText = '+'; 
+                
+                // 創建一個透明的 input color，覆蓋在按鈕上
+                const input = document.createElement('input');
+                input.type = 'color';
+                // 絕對定位、填滿父層、透明度為 0
+                input.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;";
+                
+                input.onchange = (e) => {
+                     Store.data.colors.push(e.target.value); 
+                     Store.save(); 
+                     this.selectedColor = e.target.value; 
+                     this.renderColors(); 
+                     this.updateColorUI(); 
+                };
+                
+                add.appendChild(input);
                 cList.appendChild(add); 
             },
             updateColorUI() { this.renderColors(); }
@@ -637,7 +642,6 @@
 
                 const handle = (e, isEnd = false) => {
                     e.preventDefault(); const rect = face.getBoundingClientRect();
-                    // Fix: Use changedTouches if touches is empty (on touchend)
                     const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
                     const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
                     
