@@ -6,8 +6,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" sizes="180x180" href="icon.jpg">
-    <link rel="icon" type="image/png" href="icon.jpg">
     <title>Deep Dark Calendar</title>
     <style>
         :root {
@@ -20,15 +18,31 @@
             --danger-color: #ff453a;
             --ai-color: #bf5af2;
             --reminder-glow: rgba(255, 69, 58, 0.6);
+            --reminder-border: rgba(255, 255, 255, 0.8);
             --safe-top: env(safe-area-inset-top, 20px);
             --safe-bottom: env(safe-area-inset-bottom, 20px);
             --header-height: 50px;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, sans-serif;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        /* ★ 核心修正：全域禁止長按選取與系統選單 ★ */
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none; 
+            -webkit-user-select: none; /* 禁止選取文字 */
+            -webkit-touch-callout: none; /* 禁止長按跳出系統選單/放大鏡 */
+        }
+        
         body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; }
-        input, textarea { font-family: inherit; }
+        
+        /* 例外：輸入框允許選字 */
+        input, textarea { 
+            font-family: inherit; 
+            user-select: text; 
+            -webkit-user-select: text; 
+        }
+        
         .hidden { display: none !important; }
 
         /* Error Banner */
@@ -41,35 +55,17 @@
         /* App Structure */
         #app { position: relative; width: 100%; height: 100%; overflow: hidden; }
         
-        /* --- NEW HEADER LAYOUT --- */
         header {
             position: absolute; top: 0; left: 0; right: 0; height: calc(var(--header-height) + var(--safe-top));
-            padding-top: var(--safe-top); 
-            display: flex; justify-content: space-between; align-items: center;
-            padding-left: 10px; padding-right: 10px; 
-            z-index: 100; background: rgba(0,0,0,0.8);
+            padding-top: var(--safe-top); display: flex; justify-content: space-between; align-items: center;
+            padding-left: 10px; padding-right: 10px; z-index: 100; background: rgba(0,0,0,0.8);
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border-bottom: 0.5px solid rgba(255,255,255,0.1);
         }
-        
-        /* Left Menu Button */
-        .header-btn-side { 
-            font-size: 1.5rem; color: var(--accent-color); 
-            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-        }
-
-        /* Center Navigation Group */
-        .header-center-group {
-            display: flex; align-items: center; gap: 10px; /* Arrows close to title */
-        }
-        .nav-arrow {
-            font-size: 1.8rem; color: var(--accent-color); padding: 0 10px; height: 40px; 
-            display: flex; align-items: center; justify-content: center;
-        }
-        .nav-title { 
-            font-weight: 700; font-size: 1.2rem; cursor: pointer; 
-            min-width: 80px; text-align: center;
-        }
+        .header-btn-side { font-size: 1.5rem; color: var(--accent-color); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+        .header-center-group { display: flex; align-items: center; gap: 10px; }
+        .nav-arrow { font-size: 1.8rem; color: var(--accent-color); padding: 0 10px; height: 40px; display: flex; align-items: center; justify-content: center; }
+        .nav-title { font-weight: 700; font-size: 1.2rem; cursor: pointer; min-width: 80px; text-align: center; }
 
         .view-container { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
@@ -79,14 +75,13 @@
 
         /* Calendar Styles */
         .month-large-title { 
-            font-size: 2.2rem; font-weight: 800; color: white; 
-            padding: 10px 0 5px 0; text-align: center; /* Centered as requested */
-            opacity: 0; animation: fadeIn 0.4s forwards;
+            font-size: 2.2rem; font-weight: 800; color: white; padding: 10px 0 5px 0; 
+            text-align: center; opacity: 0; animation: fadeIn 0.4s forwards;
         }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 10px; flex: 1; align-content: start; }
         .weekday-row { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--text-secondary); font-size: 0.8rem; padding: 10px 10px 5px; }
         .day-cell { height: 11vh; display: flex; flex-direction: column; align-items: center; border-radius: 12px; position: relative; border-top: 0.5px solid rgba(255,255,255,0.05); background: transparent; }
-        .day-cell.today .day-num { background: var(--danger-color); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(255,69,58,0.4); }
+        .day-cell.today .day-num { background: transparent; color: var(--danger-color); font-weight: 900; font-size: 1.1rem; text-shadow: 0 0 10px rgba(255, 69, 58, 0.3); }
         .day-num { margin-top: 6px; font-size: 1rem; font-weight: 500; }
         .dots { display: flex; gap: 3px; margin-top: 4px; }
         .dot { width: 5px; height: 5px; border-radius: 50%; }
@@ -105,9 +100,10 @@
         .strip-day { display: flex; flex-direction: column; align-items: center; padding: 5px 10px; border-radius: 12px; font-size: 0.8rem; color: var(--text-secondary); }
         .strip-day.active { background: var(--surface-color); color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
         
-        #day-scroll { overflow-y: auto; overflow-x: hidden; height: calc(100% - 60px); position: relative; -webkit-overflow-scrolling: touch; touch-action: pan-y; width: 100%; }
+        #day-scroll { overflow-y: auto; overflow-x: hidden; height: calc(100% - 60px); position: relative; -webkit-overflow-scrolling: touch; touch-action: pan-y; width: 100vw; }
         .timeline-container { position: relative; width: 100%; height: 1440px; transition: height 0.1s linear; }
         .hour-mark { position: absolute; left: 10px; width: 100%; color: var(--text-secondary); font-size: 0.8rem; border-top: 0.5px solid rgba(255,255,255,0.1); }
+        
         .event-block { 
             position: absolute; left: 60px; right: 10px; border-radius: 8px; padding: 8px; 
             overflow: hidden; font-size: 0.9rem; font-weight: 500; 
@@ -115,8 +111,14 @@
             transition: transform 0.2s ease, border 0.3s ease, background 0.3s, opacity 0.3s;
             touch-action: pan-x;
         }
-        .event-block.reminder-on { border: 2px solid var(--reminder-glow); box-shadow: 0 0 10px var(--reminder-glow); }
+        .event-block.reminder-on { border: 2px solid var(--reminder-border); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        /* Bell Icon on Top Right */
+        .event-block.reminder-on::after {
+            content: '🔔'; position: absolute; top: 2px; right: 4px; font-size: 0.8rem;
+            filter: grayscale(1) brightness(2);
+        }
         .event-block.completed { background: rgba(0,0,0,0.6) !important; border: 1px solid rgba(255,255,255,0.1); opacity: 0.6; color: #888; text-decoration: line-through; }
+        
         .event-actions { position: absolute; right: 10px; top: 0; bottom: 0; display: flex; align-items: center; gap: 10px; transform: translateX(150%); transition: transform 0.3s ease; }
         .event-block.swiped .event-content { transform: translateX(-120px); }
         .event-block.swiped .event-actions { transform: translateX(0); }
@@ -229,43 +231,35 @@
                 <div class="nav-arrow clickable" id="btn-next">›</div>
             </div>
             
-            <div class="header-btn-side" style="opacity:0; pointer-events:none;">☰</div> </header>
+            <div class="header-btn-side" style="opacity:0; pointer-events:none;">☰</div>
+        </header>
 
         <div id="view-container" class="view-container"></div>
 
         <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
         <div class="sidebar" id="sidebar">
-            
             <div class="settings-view active" id="sidebar-home">
                 <div class="setting-header" style="margin-top:20px;">Menu</div>
-                <div class="list-item clickable" onclick="Settings.nav('todo')">
-                    <div style="display:flex; align-items:center; gap:10px;"><span>📋</span><span data-t="todo">To-Do List</span></div><span>›</span>
-                </div>
-                <div class="list-item clickable" onclick="Settings.nav('settings-menu')">
-                    <div style="display:flex; align-items:center; gap:10px;"><span>⚙️</span><span data-t="settings">Settings</span></div><span>›</span>
-                </div>
+                <div class="list-item clickable" onclick="Settings.nav('todo')"><div style="display:flex; align-items:center; gap:10px;"><span>📋</span><span data-t="todo">To-Do List</span></div><span>›</span></div>
+                <div class="list-item clickable" onclick="Settings.nav('settings-menu')"><div style="display:flex; align-items:center; gap:10px;"><span>⚙️</span><span data-t="settings">Settings</span></div><span>›</span></div>
             </div>
-
             <div class="settings-view" id="sidebar-settings-menu" style="transform: translateX(100%);">
                 <div class="back-link clickable" onclick="Settings.back('home')">← <span data-t="back">Back</span></div>
                 <div class="setting-header" data-t="settings">Settings</div>
                 <div class="list-item clickable" onclick="Settings.nav('lang')"><span data-t="lang">Language</span> <span>›</span></div>
                 <div class="list-item clickable" onclick="Settings.nav('sound')"><span data-t="ringtone">Ringtone</span> <span>›</span></div>
             </div>
-
             <div class="settings-view" id="sidebar-todo" style="transform: translateX(100%); z-index: 505;">
                 <div class="back-link clickable" onclick="Settings.back('home')">← <span data-t="back">Back</span></div>
                 <div class="setting-header" data-t="todo">To-Do List</div>
                 <div id="todo-container" style="padding-bottom:60px;"></div>
             </div>
-
             <div class="settings-view" id="sidebar-lang" style="transform: translateX(100%);">
                 <div class="back-link clickable" onclick="Settings.back('settings-menu')">← <span data-t="back">Back</span></div>
                 <div class="setting-header" data-t="lang">Language</div>
                 <div class="list-item clickable" id="opt-lang-en" onclick="Settings.setLang('en')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>English</span></div></div>
                 <div class="list-item clickable" id="opt-lang-zh" onclick="Settings.setLang('zh')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>繁體中文</span></div></div>
             </div>
-
             <div class="settings-view" id="sidebar-sound" style="transform: translateX(100%);">
                 <div class="back-link clickable" onclick="Settings.back('settings-menu')">← <span data-t="back">Back</span></div>
                 <div class="setting-header" data-t="ringtone">Ringtone</div>
@@ -292,7 +286,6 @@
                 <div style="margin:20px 0;"><label class="form-label" data-t="color">Color</label><div id="color-list" style="display:flex; gap:15px; overflow-x:auto; padding:10px 5px; align-items:center;"></div></div>
                 <textarea id="evt-desc" class="form-input" rows="3" placeholder="Notes"></textarea>
                 <div class="ai-fab clickable" onclick="AIChat.open()">✨</div>
-                
                 <input type="color" id="custom-color-picker" style="display:none;">
             </div>
         </div>
@@ -311,6 +304,13 @@
     </div>
 
     <script>
+        // ★ 禁止右鍵選單 (阻擋長按出現選單)
+        window.oncontextmenu = function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+        };
+
         window.onerror = function(msg, url, line) {
             const banner = document.getElementById('error-banner'); banner.style.display = 'block'; banner.innerText = "Error: " + msg;
             if(msg.includes('JSON') || msg.includes('null')) { localStorage.removeItem('dark-cal-db'); location.reload(); }
@@ -321,7 +321,6 @@
         const API_KEY = "AIzaSyDvWhhjHmRqNOdAUfd0i16qaUL8MaSg0Uc"; 
         
         let GoogleGenerativeAI;
-        // Fix: Use gemini-pro for stability
         import("https://esm.run/@google/generative-ai").then(module => { GoogleGenerativeAI = module.GoogleGenerativeAI; }).catch(err => console.log("AI Offline"));
 
         const Translations = {
@@ -384,15 +383,14 @@
                 setInterval(() => this.checkReminders(), 15000);
             },
             bindGlobal() {
-                document.getElementById('btn-menu').onclick = () => Settings.open(); // Menu Button
-                document.getElementById('btn-prev').onclick = () => this.moveDate(-1); // Left Arrow
-                document.getElementById('btn-next').onclick = () => this.moveDate(1); // Right Arrow
-                document.getElementById('nav-title').onclick = () => this.nav('up'); // Title Click
+                document.getElementById('btn-menu').onclick = () => Settings.open();
+                document.getElementById('btn-prev').onclick = () => this.moveDate(-1);
+                document.getElementById('btn-next').onclick = () => this.moveDate(1);
+                document.getElementById('nav-title').onclick = () => this.nav('up');
                 
                 document.getElementById('sidebar-backdrop').onclick = () => Settings.close();
                 document.getElementById('evt-repeat').onchange = (e) => { document.getElementById('repeat-end-row').classList.toggle('hidden', !e.target.checked); };
                 
-                // Fix Color Input binding
                 const colorInput = document.getElementById('custom-color-picker');
                 if(colorInput) {
                     colorInput.onchange = (e) => { 
@@ -459,9 +457,14 @@
                 const grid = document.createElement('div'); grid.className = 'calendar-grid';
                 const daysHeader = document.createElement('div'); daysHeader.className = 'weekday-row'; ['S','M','T','W','T','F','S'].forEach(d => daysHeader.innerHTML += `<div>${d}</div>`); container.appendChild(daysHeader);
                 const y = this.date.getFullYear(), m = this.date.getMonth(); const first = new Date(y, m, 1).getDay(); const total = new Date(y, m+1, 0).getDate();
+                
+                const today = new Date(); // Fixed today check
+                
                 for(let i=0; i<first; i++) grid.appendChild(document.createElement('div'));
                 for(let i=1; i<=total; i++) {
-                    const el = document.createElement('div'); el.className = 'day-cell clickable'; if(i === new Date().getDate() && m === new Date().getMonth()) el.classList.add('today');
+                    const el = document.createElement('div'); el.className = 'day-cell clickable'; 
+                    if(i === today.getDate() && m === today.getMonth() && y === today.getFullYear()) el.classList.add('today');
+                    
                     el.innerHTML = `<div class="day-num">${i}</div><div class="dots"></div>`;
                     Store.getEvents(new Date(y, m, i)).slice(0,3).forEach(e => { if(!e.completed) { const d = document.createElement('div'); d.className='dot'; d.style.background = e.color; el.querySelector('.dots').appendChild(d); } });
                     el.onclick = () => this.setView('week', new Date(y, m, i)); grid.appendChild(el);
@@ -510,7 +513,12 @@
                     let ts = 0; let lpTimer;
                     el.addEventListener('touchstart', ev => { 
                         ts = ev.touches[0].clientX; 
-                        lpTimer = setTimeout(() => { e.reminder = !e.reminder; Store.save(); this.render(); if(navigator.vibrate) navigator.vibrate(50); }, 1000); 
+                        // ★ 修正：長按後只改 Class 不 Render (Scroll Jump Fix)
+                        lpTimer = setTimeout(() => { 
+                            e.reminder = !e.reminder; Store.save(); 
+                            if(e.reminder) el.classList.add('reminder-on'); else el.classList.remove('reminder-on');
+                            if(navigator.vibrate) navigator.vibrate(50);
+                        }, 1000); 
                     });
                     el.addEventListener('touchend', ev => { 
                         clearTimeout(lpTimer); 
@@ -571,22 +579,18 @@
                     d.onclick = (e) => { 
                         e.stopPropagation(); 
                         if (this.selectedColor === c) {
-                            // Already selected
                             if (idx >= 5) { // Only delete custom colors
                                 if (this.deletingIndex === idx) {
-                                    // Confirm Delete
                                     Store.data.colors.splice(idx, 1); Store.save(); 
                                     this.selectedColor = Store.data.colors[0]; 
                                     this.deletingIndex = -1;
                                     this.renderColors(); this.updateColorUI();
                                 } else {
-                                    // Enter Delete Mode
                                     this.deletingIndex = idx;
                                     this.renderColors(); // Re-render to show icon
                                 }
                             }
                         } else { 
-                            // Select new color
                             this.selectedColor = c; 
                             this.deletingIndex = -1; // Reset delete mode
                             this.updateColorUI(); 
@@ -624,7 +628,6 @@
                         num.style.left = (140 + r*Math.cos(rad)) + 'px'; num.style.top = (140 + r*Math.sin(rad)) + 'px'; num.innerText = val; face.appendChild(num);
                     }
                 } else {
-                    // Minute View: 60 ticks
                     for(let i=0; i<60; i++) {
                         const tick = document.createElement('div'); tick.className = `clock-tick ${i%5===0?'major':''}`;
                         tick.style.transform = `translate(-50%, -50%) rotate(${i*6}deg) translateY(-110px)`;
@@ -659,7 +662,6 @@
                 };
                 face.ontouchmove = (e) => handle(e, false); face.ontouchend = (e) => handle(e, true); face.onmousedown = () => face.onmousemove = (e)=>handle(e,false); face.onmouseup = (e) => { handle(e,true); face.onmousemove=null; };
                 
-                // Init hand position
                 const initVal = this.mode==='hour'?(this.valH||12):this.valM;
                 const initDeg = this.mode==='hour'?(initVal%12)*30 : initVal*6;
                 document.getElementById('clock-hand').style.transform = `translate(-50%,-100%) rotate(${initDeg}deg)`;
@@ -711,7 +713,6 @@
                 document.getElementById('chat-messages').innerHTML += `<div class="msg-bubble msg-user">${text}</div>`;
                 document.getElementById('ai-msg-input').value = '';
                 try {
-                    // ★ 修正：改回 gemini-pro
                     const genAI = new GoogleGenerativeAI(API_KEY); const model = genAI.getGenerativeModel({ model: "gemini-pro" });
                     const weekEvents = Store.getEvents(App.date).map(e => `${new Date(e.start).getHours()}:${new Date(e.start).getMinutes()}-${new Date(e.end).getHours()}:${new Date(e.end).getMinutes()}`).join(',');
                     const res = await model.generateContent(`Find free slot for: "${text}". Schedule: ${weekEvents}. Return JSON: { "reply": "...", "slot": { "dayOffset": 0, "h": 14, "m": 0 } }`);
@@ -729,4 +730,3 @@
     </script>
 </body>
 </html>
-
