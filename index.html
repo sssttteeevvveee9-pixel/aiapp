@@ -39,15 +39,35 @@
         /* App Structure */
         #app { position: relative; width: 100%; height: 100%; overflow: hidden; }
         
+        /* --- NEW HEADER LAYOUT --- */
         header {
             position: absolute; top: 0; left: 0; right: 0; height: calc(var(--header-height) + var(--safe-top));
-            padding-top: var(--safe-top); display: flex; justify-content: space-between; align-items: center;
-            padding-left: 16px; padding-right: 16px; z-index: 100; background: rgba(0,0,0,0.8);
+            padding-top: var(--safe-top); 
+            display: flex; justify-content: space-between; align-items: center;
+            padding-left: 10px; padding-right: 10px; 
+            z-index: 100; background: rgba(0,0,0,0.8);
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border-bottom: 0.5px solid rgba(255,255,255,0.1);
         }
-        .nav-title { font-weight: 700; font-size: 1.1rem; cursor: pointer; }
-        .nav-btn { color: var(--accent-color); font-size: 1.5rem; padding: 5px 15px; min-width: 50px; display: flex; align-items: center; justify-content: center; height: 100%; }
+        
+        /* Left Menu Button */
+        .header-btn-side { 
+            font-size: 1.5rem; color: var(--accent-color); 
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Center Navigation Group */
+        .header-center-group {
+            display: flex; align-items: center; gap: 10px; /* Arrows close to title */
+        }
+        .nav-arrow {
+            font-size: 1.8rem; color: var(--accent-color); padding: 0 10px; height: 40px; 
+            display: flex; align-items: center; justify-content: center;
+        }
+        .nav-title { 
+            font-weight: 700; font-size: 1.2rem; cursor: pointer; 
+            min-width: 80px; text-align: center;
+        }
 
         .view-container { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
@@ -57,8 +77,9 @@
 
         /* Calendar Styles */
         .month-large-title { 
-            font-size: 2rem; font-weight: 800; color: white; padding: 10px 20px 0; 
-            text-align: left; opacity: 0; animation: fadeIn 0.4s forwards;
+            font-size: 2.2rem; font-weight: 800; color: white; 
+            padding: 10px 0 5px 0; text-align: center; /* Centered as requested */
+            opacity: 0; animation: fadeIn 0.4s forwards;
         }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 10px; flex: 1; align-content: start; }
         .weekday-row { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--text-secondary); font-size: 0.8rem; padding: 10px 10px 5px; }
@@ -82,30 +103,15 @@
         .strip-day { display: flex; flex-direction: column; align-items: center; padding: 5px 10px; border-radius: 12px; font-size: 0.8rem; color: var(--text-secondary); }
         .strip-day.active { background: var(--surface-color); color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
         
-        /* ★ 修正：長條型日曆設定
-           touch-action: pan-y; -> 鎖定只能垂直滑動，防止水平滑動畫面
-           overflow-x: hidden; -> 隱藏水平捲軸
-        */
-        #day-scroll { 
-            overflow-y: auto; 
-            overflow-x: hidden; 
-            height: calc(100% - 60px); 
-            position: relative; 
-            -webkit-overflow-scrolling: touch; 
-            touch-action: pan-y; 
-            width: 100vw;
-        }
-        
+        #day-scroll { overflow-y: auto; overflow-x: hidden; height: calc(100% - 60px); position: relative; -webkit-overflow-scrolling: touch; touch-action: pan-y; width: 100%; }
         .timeline-container { position: relative; width: 100%; height: 1440px; transition: height 0.1s linear; }
         .hour-mark { position: absolute; left: 10px; width: 100%; color: var(--text-secondary); font-size: 0.8rem; border-top: 0.5px solid rgba(255,255,255,0.1); }
-        
-        /* Event Block - 允許水平滑動 (pan-x) */
         .event-block { 
             position: absolute; left: 60px; right: 10px; border-radius: 8px; padding: 8px; 
             overflow: hidden; font-size: 0.9rem; font-weight: 500; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: center;
             transition: transform 0.2s ease, border 0.3s ease, background 0.3s, opacity 0.3s;
-            touch-action: pan-x; /* 關鍵：允許圖塊左右滑 */
+            touch-action: pan-x;
         }
         .event-block.reminder-on { border: 2px solid var(--reminder-glow); box-shadow: 0 0 10px var(--reminder-glow); }
         .event-block.completed { background: rgba(0,0,0,0.6) !important; border: 1px solid rgba(255,255,255,0.1); opacity: 0.6; color: #888; text-decoration: line-through; }
@@ -213,10 +219,15 @@
 
     <div id="app">
         <header>
-            <div class="nav-btn clickable" id="nav-left">☰</div>
-            <div class="nav-title clickable" id="nav-title">2025</div>
-            <div class="nav-btn clickable" id="nav-right">›</div>
-        </header>
+            <div class="header-btn-side clickable" id="btn-menu">☰</div>
+            
+            <div class="header-center-group">
+                <div class="nav-arrow clickable" id="btn-prev">‹</div>
+                <div class="nav-title clickable" id="nav-title">2025</div>
+                <div class="nav-arrow clickable" id="btn-next">›</div>
+            </div>
+            
+            <div class="header-btn-side" style="opacity:0; pointer-events:none;">☰</div> </header>
 
         <div id="view-container" class="view-container"></div>
 
@@ -308,7 +319,7 @@
         const API_KEY = "AIzaSyDvWhhjHmRqNOdAUfd0i16qaUL8MaSg0Uc"; 
         
         let GoogleGenerativeAI;
-        // ★ 修正：改回 gemini-pro (相容性較高)，若您的 API key 支援 flash 可自行改回
+        // Fix: Use gemini-pro for stability
         import("https://esm.run/@google/generative-ai").then(module => { GoogleGenerativeAI = module.GoogleGenerativeAI; }).catch(err => console.log("AI Offline"));
 
         const Translations = {
@@ -371,13 +382,15 @@
                 setInterval(() => this.checkReminders(), 15000);
             },
             bindGlobal() {
-                document.getElementById('nav-left').onclick = () => this.nav('left');
-                document.getElementById('nav-right').onclick = () => this.nav('next');
-                document.getElementById('nav-title').onclick = () => this.nav('up');
+                document.getElementById('btn-menu').onclick = () => Settings.open(); // Menu Button
+                document.getElementById('btn-prev').onclick = () => this.moveDate(-1); // Left Arrow
+                document.getElementById('btn-next').onclick = () => this.moveDate(1); // Right Arrow
+                document.getElementById('nav-title').onclick = () => this.nav('up'); // Title Click
+                
                 document.getElementById('sidebar-backdrop').onclick = () => Settings.close();
                 document.getElementById('evt-repeat').onchange = (e) => { document.getElementById('repeat-end-row').classList.toggle('hidden', !e.target.checked); };
                 
-                // Color Picker Logic Fix
+                // Fix Color Input binding
                 const colorInput = document.getElementById('custom-color-picker');
                 if(colorInput) {
                     colorInput.onchange = (e) => { 
@@ -411,12 +424,9 @@
             },
             updateLang() { document.querySelectorAll('[data-t]').forEach(el => { el.innerText = Utils.t(el.getAttribute('data-t')); }); document.getElementById('evt-title').placeholder = Utils.t('event'); },
             nav(action) {
-                if (action === 'left') this.moveDate(-1);
-                else if (action === 'next') this.moveDate(1);
-                else if (action === 'up') {
+                if (action === 'up') {
                     if (this.view === 'day') this.setView('week');
                     else if (this.view === 'week') this.setView('month');
-                    else if (this.view === 'month') Settings.open();
                 }
             },
             moveDate(dir) { if(this.view === 'month') this.date.setMonth(this.date.getMonth() + dir); else if(this.view === 'week') this.date.setDate(this.date.getDate() + (dir*7)); else this.date.setDate(this.date.getDate() + dir); this.render(); },
@@ -424,22 +434,18 @@
             render() {
                 const container = document.getElementById('view-container'); container.innerHTML = '';
                 const titleEl = document.getElementById('nav-title');
-                const leftEl = document.getElementById('nav-left');
                 const lang = Store.data.settings.lang || 'zh';
                 
                 if(this.view === 'month') { 
                     titleEl.innerText = this.date.getFullYear();
-                    leftEl.innerText = '☰';
                     this.renderMonth(container); 
                 }
                 else if (this.view === 'week') { 
                     titleEl.innerText = this.date.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', { month: 'long' }); 
-                    leftEl.innerText = '‹';
                     this.renderWeek(container); 
                 }
                 else { 
                     titleEl.innerText = this.date.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', { month: 'long' }); 
-                    leftEl.innerText = '‹';
                     this.renderDay(container); 
                 }
             },
@@ -506,7 +512,6 @@
                     });
                     el.addEventListener('touchend', ev => { 
                         clearTimeout(lpTimer); 
-                        // ★ 修正：使用 changedTouches 避免 undefined error
                         const touch = ev.changedTouches ? ev.changedTouches[0] : ev.touches[0];
                         if (touch) { const diff = ts - touch.clientX; if(diff > 60) el.classList.add('swiped'); else if (diff < -60) el.classList.remove('swiped'); }
                     });
