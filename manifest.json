@@ -1,51 +1,21 @@
-import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
-
-
-
-// ★★★ 請將下面這行引號內的文字換成你的 API Key ★★★
-
-const API_KEY = "AIzaSyDvWhhjHmRqNOdAUfd0i16qaUL8MaSg0Uc";
-
-
-
 {
-
   "name": "DarkMode Cal",
-
   "short_name": "DM Cal",
-
   "start_url": "./index.html",
-
   "display": "standalone",
-
   "background_color": "#000000",
-
   "theme_color": "#000000",
-
   "orientation": "portrait",
-
   "icons": [
-
     {
-
       "src": "https://via.placeholder.com/192/000000/ffffff?text=Cal",
-
       "sizes": "192x192",
-
       "type": "image/png"
-
     },
-
     {
-
       "src": "https://via.placeholder.com/512/000000/ffffff?text=Cal",
-
       "sizes": "512x512",
-
       "type": "image/png"
-
     }
-
   ]
-
 }
