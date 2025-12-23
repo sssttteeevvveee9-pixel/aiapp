@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <title>Deep Dark Calendar Fixed</title>
+    <title>Deep Dark Calendar 24H Fit</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -26,7 +26,6 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-        /* 禁止整頁橡皮筋效果 */
         body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; overscroll-behavior: none; position: fixed; }
         input, textarea { font-family: inherit; user-select: text; -webkit-user-select: text; }
         .hidden { display: none !important; }
@@ -57,26 +56,21 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             padding-top: calc(var(--header-height) + var(--safe-top));
             background: var(--bg-color); 
-            /* 關鍵修改：禁止 View Container 捲動，改由內部元素控制 */
             overflow: hidden; 
             display: flex; flex-direction: column;
-            touch-action: pan-x; /* 只允許左右滑動手勢(若有)，禁止上下 */
+            touch-action: none; /* 禁止預設手勢 */
         }
 
-        /* Calendar Styles - Modified for Fixed Height */
+        /* Calendar Styles */
         .month-large-title { 
             font-size: 2.2rem; font-weight: 800; color: white; padding: 10px 0 5px 0; 
             text-align: center; opacity: 0; animation: fadeIn 0.4s forwards;
-            flex-shrink: 0; /* 防止標題被壓縮 */
+            flex-shrink: 0;
         }
         
         .calendar-grid { 
-            display: grid; 
-            grid-template-columns: repeat(7, 1fr); 
-            padding: 5px 10px 20px 10px; 
-            flex: 1; /* 佔滿剩餘空間 */
-            height: 100%; /* 強制高度 */
-            align-content: stretch; /* 拉伸內容以填滿 */
+            display: grid; grid-template-columns: repeat(7, 1fr); padding: 5px 10px 20px 10px; 
+            flex: 1; height: 100%; align-content: stretch;
         }
         
         .weekday-row { 
@@ -85,37 +79,61 @@
             flex-shrink: 0;
         }
         
-        /* 關鍵修改：Day Cell 自動彈性高度，不寫死 vh */
         .day-cell { 
-            display: flex; flex-direction: column; align-items: center; 
-            border-radius: 8px; position: relative; 
-            border-top: 0.5px solid rgba(255,255,255,0.05); 
-            background: transparent; 
-            height: auto; /* 自動 */
-            min-height: 0; /* 允許 Grid 壓縮 */
+            display: flex; flex-direction: column; align-items: center; border-radius: 8px; position: relative; 
+            border-top: 0.5px solid rgba(255,255,255,0.05); background: transparent; 
+            height: auto; min-height: 0;
         }
         .day-cell.today .day-num { background: transparent; color: var(--danger-color); font-weight: 900; font-size: 1.1rem; text-shadow: 0 0 10px rgba(255, 69, 58, 0.3); }
         .day-num { margin-top: 6px; font-size: 1rem; font-weight: 500; }
         .dots { display: flex; gap: 3px; margin-top: 4px; }
         .dot { width: 5px; height: 5px; border-radius: 50%; }
 
-        /* Week & Day Views */
+        /* Week View - 24H Full Fit (No Scroll) */
         .week-view-container { display: flex; height: 100%; width: 100%; flex-direction: column; overflow: hidden; }
-        .week-header-row { display: grid; grid-template-columns: 40px repeat(7, 1fr); text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; flex-shrink: 0; background: var(--bg-color); z-index: 10; }
         
-        /* Week Body - 這裡允許內部捲動時間軸，但不是整頁捲動 */
+        .week-header-row { 
+            display: grid; grid-template-columns: 40px repeat(7, 1fr); 
+            text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); 
+            padding-bottom: 5px; flex-shrink: 0; background: var(--bg-color); z-index: 10; 
+        }
+        
+        /* 關鍵修改：Week Body 禁止捲動，Flex 1 撐滿 */
         .week-body { 
             flex: 1; display: flex; position: relative; 
-            overflow-y: auto; /* 只有時間軸區域可以捲動 */
-            overflow-x: hidden;
-            -webkit-overflow-scrolling: touch;
+            overflow: hidden; /* 禁止滑動 */
+            height: 100%;
         }
-        .week-time-col { width: 40px; height: 1440px; /* 固定時間軸高度 */ border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: space-between; padding-top: 10px; padding-bottom: 10px; }
-        .week-time-label { font-size: 0.6rem; color: var(--text-secondary); text-align: right; padding-right: 5px; transform: translateY(-50%); height: 0; }
-        .week-grid-col { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); height: 1440px; position: relative; }
+        
+        /* 關鍵修改：Time Col 高度 100%，自動壓縮 24 小時到一頁 */
+        .week-time-col { 
+            width: 40px; 
+            height: 100%; /* 強制適應高度 */
+            border-right: 1px solid rgba(255,255,255,0.1); 
+            display: flex; flex-direction: column; 
+            /* justify-content: space-between; 不需要，改用 absolute 定位會更準 */
+            position: relative;
+        }
+        
+        /* 時間標籤縮小一點，避免太擠 */
+        .week-time-label { 
+            position: absolute; width: 100%;
+            font-size: 0.55rem; color: var(--text-secondary); 
+            text-align: right; padding-right: 5px; 
+            transform: translateY(-50%); 
+        }
+
+        /* 關鍵修改：Grid Col 高度 100% */
+        .week-grid-col { 
+            flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); 
+            height: 100%; /* 強制適應高度 */
+            position: relative; 
+        }
+        
         .week-day-column { border-right: 1px solid rgba(255,255,255,0.05); height: 100%; position: relative; }
         .week-event-block { position: absolute; left: 2px; right: 2px; border-radius: 4px; opacity: 0.8; min-height: 2px; }
 
+        /* Day View */
         .week-strip { display: flex; justify-content: space-around; padding: 10px 0; background: var(--bg-color); border-bottom: 0.5px solid rgba(255,255,255,0.1); z-index: 10; position: relative; flex-shrink: 0; }
         .strip-day { display: flex; flex-direction: column; align-items: center; padding: 5px 10px; border-radius: 12px; font-size: 0.8rem; color: var(--text-secondary); }
         .strip-day.active { background: var(--surface-color); color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
@@ -458,15 +476,11 @@
                 const grid = document.createElement('div'); grid.className = 'calendar-grid';
                 const daysHeader = document.createElement('div'); daysHeader.className = 'weekday-row'; ['S','M','T','W','T','F','S'].forEach(d => daysHeader.innerHTML += `<div>${d}</div>`); container.appendChild(daysHeader);
                 
-                // 為了讓 Grid 填滿，我們這裡不使用固定 row 數，而是確保 day-cell 使用 flex 自動分配
                 const y = this.date.getFullYear(), m = this.date.getMonth(); const first = new Date(y, m, 1).getDay(); const total = new Date(y, m+1, 0).getDate();
                 const today = new Date();
                 
-                // 填充空白
                 for(let i=0; i<first; i++) {
-                    const el = document.createElement('div'); 
-                    el.className = 'day-cell';
-                    grid.appendChild(el);
+                    const el = document.createElement('div'); el.className = 'day-cell'; grid.appendChild(el);
                 }
                 
                 for(let i=1; i<=total; i++) {
@@ -477,7 +491,6 @@
                     el.onclick = () => this.setView('week', new Date(y, m, i)); grid.appendChild(el);
                 }
                 
-                // 確保剩餘格子也佔位，保持佈局
                 const remaining = 42 - (first + total); 
                 if(remaining > 0 && remaining < 14) {
                     for(let i=0;i<remaining;i++) {
@@ -494,7 +507,12 @@
                 for(let i=0; i<7; i++) { const d = new Date(start); d.setDate(d.getDate() + i); header.innerHTML += `<div class="clickable" onclick="App.setView('day', new Date('${d}'))" style="display:flex; flex-direction:column; align-items:center; ${d.toDateString()===new Date().toDateString()?'color:var(--danger-color);':''}"><span>${daysMap[i]}</span><span style="font-size:1.1rem; font-weight:bold">${d.getDate()}</span></div>`; }
                 wrapper.appendChild(header);
                 const body = document.createElement('div'); body.className = 'week-body';
-                const timeCol = document.createElement('div'); timeCol.className = 'week-time-col'; for(let i=0; i<=24; i+=3) timeCol.innerHTML += `<div class="week-time-label" style="top:${(i/24)*100}%">${i}:00</div>`; body.appendChild(timeCol);
+                const timeCol = document.createElement('div'); timeCol.className = 'week-time-col'; 
+                // 這裡移除 for 迴圈中間的文字生成，改用絕對定位在 CSS 處理，或減少顯示數量
+                for(let i=0; i<=24; i+=3) {
+                    timeCol.innerHTML += `<div class="week-time-label" style="top:${(i/24)*100}%">${i}:00</div>`;
+                }
+                body.appendChild(timeCol);
                 const gridCol = document.createElement('div'); gridCol.className = 'week-grid-col';
                 for(let i=0; i<7; i++) {
                     const d = new Date(start); d.setDate(d.getDate() + i); const dayCol = document.createElement('div'); dayCol.className = 'week-day-column'; dayCol.onclick = () => this.setView('day', d);
@@ -617,154 +635,6 @@
                 cList.appendChild(add); 
             },
             updateColorUI() { this.renderColors(); }
-        };
-
-        const ClockPicker = {
-            mode: 'hour', target: 'start', valH: 0, valM: 0,
-            open(target) { this.target = target; this.mode = 'hour'; this.renderFace(); document.getElementById('clock-picker').classList.add('open'); },
-            close() { document.getElementById('clock-picker').classList.remove('open'); },
-            next() { if(this.mode === 'hour') { this.mode = 'minute'; this.renderFace(); } else { Modal.setTime(this.target, this.valH, this.valM); this.close(); } },
-            renderFace() {
-                const face = document.getElementById('clock-face'); document.getElementById('clock-title').innerText = this.mode === 'hour' ? 'Select Hour' : 'Select Minute';
-                face.querySelectorAll('.clock-num').forEach(e => e.remove()); face.querySelectorAll('.clock-tick').forEach(e => e.remove()); const r = 110;
-                
-                if (this.mode === 'hour') {
-                    for(let i=1; i<=12; i++) {
-                        const num = document.createElement('div'); num.className = 'clock-num'; num.id = 'c'+i;
-                        const val = i; const rad = ((i*30)-90) * (Math.PI/180);
-                        num.style.left = (140 + r*Math.cos(rad)) + 'px'; num.style.top = (140 + r*Math.sin(rad)) + 'px'; num.innerText = val; face.appendChild(num);
-                    }
-                } else {
-                    for(let i=0; i<60; i++) {
-                        const tick = document.createElement('div'); tick.className = `clock-tick ${i%5===0?'major':''}`;
-                        tick.style.transform = `translate(-50%, -50%) rotate(${i*6}deg) translateY(-110px)`;
-                        face.appendChild(tick);
-                    }
-                }
-
-                const handle = (e, isEnd = false) => {
-                    e.preventDefault(); const rect = face.getBoundingClientRect();
-                    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
-                    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
-                    
-                    const x = clientX - (rect.left+140); const y = clientY - (rect.top+140);
-                    let deg = Math.atan2(y, x) * (180/Math.PI) + 90; if(deg<0) deg+=360;
-                    
-                    const step = this.mode === 'hour' ? 30 : 6; const snapped = Math.round(deg / step) * step;
-                    const hand = document.getElementById('clock-hand');
-                    hand.style.transition = isEnd ? 'transform 0.2s cubic-bezier(0.4, 2, 0.55, 0.44)' : 'none';
-                    hand.style.transform = `translate(-50%,-100%) rotate(${snapped}deg)`;
-                    
-                    let val = this.mode==='hour' ? Math.round(snapped/30)||12 : Math.round(snapped/6)%60;
-                    if(this.mode==='hour') this.valH=val; else this.valM=val;
-                    
-                    if(this.mode==='hour') {
-                        document.querySelectorAll('.clock-num').forEach(e => e.classList.remove('active'));
-                        let anchor = val; if(anchor===0) anchor=12; const t = document.getElementById('c'+anchor); if(t) t.classList.add('active');
-                    }
-                    
-                    document.getElementById('clock-center-display').innerText = this.mode==='hour'?val:Utils.pad(val);
-                    if(isEnd && this.mode === 'hour') setTimeout(() => this.next(), 300); // Auto-Next
-                };
-                face.ontouchmove = (e) => handle(e, false); face.ontouchend = (e) => handle(e, true); face.onmousedown = () => face.onmousemove = (e)=>handle(e,false); face.onmouseup = (e) => { handle(e,true); face.onmousemove=null; };
-                
-                const initVal = this.mode==='hour'?(this.valH||12):this.valM;
-                const initDeg = this.mode==='hour'?(initVal%12)*30 : initVal*6;
-                document.getElementById('clock-hand').style.transform = `translate(-50%,-100%) rotate(${initDeg}deg)`;
-                document.getElementById('clock-center-display').innerText = this.mode==='hour'?initVal:Utils.pad(initVal);
-                if(this.mode==='hour') { let t=document.getElementById('c'+(initVal||12)); if(t) t.classList.add('active'); }
-            }
-        };
-
-        const Settings = {
-            open() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-backdrop').classList.add('open'); this.nav('home'); },
-            close() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-backdrop').classList.remove('open'); },
-            nav(pageId) {
-                document.querySelectorAll('.settings-view').forEach(p => p.classList.remove('active'));
-                if(pageId === 'home') document.getElementById('sidebar-home').classList.add('active');
-                else if(pageId === 'todo') { document.getElementById('sidebar-todo').classList.add('active'); this.renderTodo(); }
-                else if(pageId === 'settings-menu') document.getElementById('sidebar-settings-menu').classList.add('active');
-                else if(pageId === 'lang' || pageId === 'sound') { document.getElementById('sidebar-'+pageId).classList.add('active'); this.updateUI(); }
-            },
-            back(toPageId) { this.nav(toPageId); },
-            setLang(l) { Store.data.settings.lang = l; Store.save(); App.updateLang(); App.render(); this.updateUI(); },
-            setTone(t) { Store.data.settings.tone = t; Store.save(); Settings.updateUI(); },
-            uploadTone(input) { 
-                const file = input.files[0];
-                if(!file) return;
-
-                // 步驟 1: 嘗試透過 AudioContext 解碼 (這可以處理標準 MP3/WAV 並裁切)
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    try {
-                        const arrayBuffer = e.target.result;
-                        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                        // 這裡容易在 M4A 失敗
-                        const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                        
-                        // 裁切前 30 秒
-                        const duration = Math.min(30, decodedBuffer.duration);
-                        const offlineCtx = new OfflineAudioContext(decodedBuffer.numberOfChannels, duration * decodedBuffer.sampleRate, decodedBuffer.sampleRate);
-                        const source = offlineCtx.createBufferSource();
-                        source.buffer = decodedBuffer;
-                        source.connect(offlineCtx.destination);
-                        source.start();
-                        
-                        const renderedBuffer = await offlineCtx.startRendering();
-                        
-                        // 轉成 WAV 
-                        const wav = audioBufferToWav(renderedBuffer);
-                        const blob = new Blob([new DataView(wav)], { type: 'audio/wav' });
-                        
-                        // 轉成 Data URL 儲存
-                        const reader2 = new FileReader();
-                        reader2.onload = function(e2) {
-                            Store.data.settings.customTone = e2.target.result;
-                            Store.save();
-                            alert("Ringtone set (Processed & Cropped)!");
-                        };
-                        reader2.readAsDataURL(blob);
-                        
-                    } catch (err) {
-                        console.log("Audio Processing Failed (Codec mismatch?), attempting fallback...", err);
-                        
-                        // 步驟 2 (Fallback): 如果解碼失敗，直接讀取原始檔案 (不裁切，直接存 Base64)
-                        // 限制大小 2.5MB (LocalStorage 上限約 5MB，安全起見)
-                        if (file.size > 2.5 * 1024 * 1024) {
-                            alert("Audio processing failed and file is too large (>2.5MB) for raw storage. Please convert to standard MP3.");
-                            return;
-                        }
-
-                        const rawReader = new FileReader();
-                        rawReader.onload = function(evt) {
-                            Store.data.settings.customTone = evt.target.result;
-                            Store.save();
-                            alert("Ringtone set (Raw mode - Compatibility fallback)!");
-                        };
-                        rawReader.readAsDataURL(file);
-                    }
-                };
-                reader.readAsArrayBuffer(file);
-            },
-            updateUI() {
-                document.querySelectorAll('.check-icon').forEach(e => e.parentElement.parentElement.classList.remove('checked'));
-                const l = Store.data.settings.lang || 'zh'; const lEl = document.getElementById('opt-lang-'+l); if(lEl) lEl.classList.add('checked');
-                const t = Store.data.settings.tone || 'Beep'; const tEl = document.getElementById('opt-tone-'+t); if(tEl) tEl.classList.add('checked');
-            },
-            renderTodo() {
-                const container = document.getElementById('todo-container'); container.innerHTML = '';
-                const todos = Store.data.events.filter(e => e.reminder && !e.completed).sort((a,b) => new Date(a.start) - new Date(b.start));
-                if(todos.length === 0) { container.innerHTML = '<div style="text-align:center;color:gray;margin-top:20px;">No reminders</div>'; return; }
-                todos.forEach(e => {
-                    const el = document.createElement('div'); el.className = 'todo-item clickable';
-                    el.innerHTML = `<div class="todo-date">${new Date(e.start).toLocaleDateString()}</div><div class="todo-title">${e.title}</div><div class="todo-time">${Utils.formatTime(new Date(e.start))} - ${Utils.formatTime(new Date(e.end))}</div>
-                    <div class="todo-actions-overlay"><button class="btn-todo-action clickable" style="background:var(--success-color);" onclick="Settings.completeTodo('${e.id}')">${Utils.t('completed')}</button><button class="btn-todo-action clickable" style="background:rgba(255,255,255,0.2);" onclick="event.stopPropagation();this.parentElement.classList.remove('show')">${Utils.t('close')}</button></div>`;
-                    el.style.borderLeft = `5px solid ${e.color}`;
-                    el.onclick = () => el.querySelector('.todo-actions-overlay').classList.add('show');
-                    container.appendChild(el);
-                });
-            },
-            completeTodo(id) { const e = Store.data.events.find(x => x.id === id); if(e) { e.completed = true; e.reminder = false; Store.save(); this.renderTodo(); App.render(); } }
         };
 
         // Helper: AudioBuffer to WAV
