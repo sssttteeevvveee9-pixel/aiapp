@@ -32,6 +32,10 @@
         /* Error Banner */
         #error-banner { position: fixed; top: 0; left: 0; width: 100%; background: var(--danger-color); color: white; padding: 40px 20px 10px; z-index: 9999; font-size: 0.8rem; text-align: center; display: none; }
 
+        /* Animation Mixin */
+        .clickable { transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .clickable:active { transform: scale(0.92); opacity: 0.8; }
+
         /* App Structure */
         #app { position: relative; width: 100%; height: 100%; overflow: hidden; }
         
@@ -42,23 +46,24 @@
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border-bottom: 0.5px solid rgba(255,255,255,0.1);
         }
-        /* Title is now clickable */
-        .nav-title { font-weight: 700; font-size: 1.2rem; cursor: pointer; transition: opacity 0.2s; }
-        .nav-title:active { opacity: 0.6; }
-        .nav-btn { color: var(--accent-color); font-size: 1.8rem; padding: 5px 15px; cursor: pointer; min-width: 50px; display: flex; align-items: center; justify-content: center; height: 100%; }
+        .nav-title { font-weight: 700; font-size: 1.1rem; cursor: pointer; }
+        .nav-btn { color: var(--accent-color); font-size: 1.5rem; padding: 5px 15px; min-width: 50px; display: flex; align-items: center; justify-content: center; height: 100%; }
 
         .view-container { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             padding-top: calc(var(--header-height) + var(--safe-top));
-            background: var(--bg-color); overflow: hidden;
+            background: var(--bg-color); overflow: hidden; display: flex; flex-direction: column;
         }
 
-        /* Calendar Grid */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 10px; height: 100%; align-content: start; }
+        /* Calendar Styles */
+        .month-large-title { 
+            font-size: 2rem; font-weight: 800; color: white; padding: 10px 20px 0; 
+            text-align: left; opacity: 0; animation: fadeIn 0.4s forwards;
+        }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 10px; flex: 1; align-content: start; }
         .weekday-row { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--text-secondary); font-size: 0.8rem; padding: 10px 10px 5px; }
-        .day-cell { height: 12vh; display: flex; flex-direction: column; align-items: center; border-radius: 8px; position: relative; border-top: 0.5px solid rgba(255,255,255,0.05); transition: background 0.2s; }
-        .day-cell:active { background: var(--surface-color); }
-        .day-cell.today .day-num { background: var(--danger-color); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+        .day-cell { height: 11vh; display: flex; flex-direction: column; align-items: center; border-radius: 12px; position: relative; border-top: 0.5px solid rgba(255,255,255,0.05); background: transparent; }
+        .day-cell.today .day-num { background: var(--danger-color); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(255,69,58,0.4); }
         .day-num { margin-top: 6px; font-size: 1rem; font-weight: 500; }
         .dots { display: flex; gap: 3px; margin-top: 4px; }
         .dot { width: 5px; height: 5px; border-radius: 50%; }
@@ -71,18 +76,15 @@
         .week-time-label { font-size: 0.6rem; color: var(--text-secondary); text-align: right; padding-right: 5px; transform: translateY(-50%); height: 0; }
         .week-grid-col { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); height: 100%; position: relative; }
         .week-day-column { border-right: 1px solid rgba(255,255,255,0.05); height: 100%; position: relative; }
-        .week-event-block { position: absolute; left: 2px; right: 2px; border-radius: 2px; opacity: 0.8; min-height: 2px; }
+        .week-event-block { position: absolute; left: 2px; right: 2px; border-radius: 4px; opacity: 0.8; min-height: 2px; }
 
         .week-strip { display: flex; justify-content: space-around; padding: 10px 0; background: var(--bg-color); border-bottom: 0.5px solid rgba(255,255,255,0.1); z-index: 10; position: relative; }
         .strip-day { display: flex; flex-direction: column; align-items: center; padding: 5px 10px; border-radius: 12px; font-size: 0.8rem; color: var(--text-secondary); }
-        .strip-day.active { background: var(--surface-color); color: white; }
-        .strip-day span:first-child { font-size: 0.7rem; margin-bottom: 2px; }
-        .strip-day span:last-child { font-size: 1.1rem; font-weight: bold; }
+        .strip-day.active { background: var(--surface-color); color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
         
         #day-scroll { overflow-y: auto; overflow-x: hidden; height: calc(100% - 60px); position: relative; -webkit-overflow-scrolling: touch; touch-action: pan-y; width: 100%; }
         .timeline-container { position: relative; width: 100%; height: 1440px; transition: height 0.1s linear; }
         .hour-mark { position: absolute; left: 10px; width: 100%; color: var(--text-secondary); font-size: 0.8rem; border-top: 0.5px solid rgba(255,255,255,0.1); }
-        
         .event-block { 
             position: absolute; left: 60px; right: 10px; border-radius: 8px; padding: 8px; 
             overflow: hidden; font-size: 0.9rem; font-weight: 500; 
@@ -92,7 +94,6 @@
         }
         .event-block.reminder-on { border: 2px solid var(--reminder-glow); box-shadow: 0 0 10px var(--reminder-glow); }
         .event-block.completed { background: rgba(0,0,0,0.6) !important; border: 1px solid rgba(255,255,255,0.1); opacity: 0.6; color: #888; text-decoration: line-through; }
-
         .event-actions { position: absolute; right: 10px; top: 0; bottom: 0; display: flex; align-items: center; gap: 10px; transform: translateX(150%); transition: transform 0.3s ease; }
         .event-block.swiped .event-content { transform: translateX(-120px); }
         .event-block.swiped .event-actions { transform: translateX(0); }
@@ -100,16 +101,26 @@
 
         /* Sidebar & Settings */
         .sidebar-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-        .sidebar { position: fixed; top: 0; left: 0; width: 70%; max-width: 320px; height: 100%; background: var(--surface-color); z-index: 500; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding-top: calc(var(--safe-top) + 20px); overflow: hidden; box-shadow: 5px 0 20px rgba(0,0,0,0.5); }
+        .sidebar { 
+            position: fixed; top: 0; left: 0; width: 70%; max-width: 320px; height: 100%; background: var(--surface-color); 
+            z-index: 500; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            padding-top: calc(var(--safe-top) + 20px); overflow: hidden; box-shadow: 5px 0 20px rgba(0,0,0,0.5);
+        }
         .sidebar.open { transform: translateX(0); }
         .sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
-        .settings-page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--surface-color); padding: 20px; padding-top: calc(var(--safe-top) + 60px); transition: transform 0.3s ease; }
-        #settings-root { transform: translateX(0); z-index: 500; }
-        .sub-page { transform: translateX(100%); z-index: 501; }
-        .sub-page.active { transform: translateX(0); }
-        .list-item { background: var(--surface-light); padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .list-item:active { background: rgba(255,255,255,0.15); }
-        .setting-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: white; padding-left: 10px; }
+        
+        .settings-view { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: var(--surface-color); padding: 20px; 
+            padding-top: calc(var(--safe-top) + 60px);
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); opacity: 0; pointer-events: none;
+        }
+        .settings-view.active { transform: translateX(0) !important; opacity: 1; pointer-events: auto; z-index: 502; }
+        #sidebar-home { transform: translateX(0); opacity: 1; pointer-events: auto; z-index: 501; }
+        
+        .list-item { background: var(--surface-light); padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .setting-header { font-size: 1.8rem; font-weight: 800; margin-bottom: 20px; color: white; }
+        .back-link { font-size: 0.9rem; color: var(--accent-color); margin-bottom: 20px; display: inline-block; font-weight: 600; }
         .check-icon { display: inline-block; width: 24px; visibility: hidden; color: var(--accent-color); font-weight: bold; font-size: 1.2rem; margin-right: 10px; }
         .checked .check-icon { visibility: visible; }
 
@@ -129,9 +140,15 @@
         .form-input { width: 100%; background: var(--surface-light); border: none; padding: 12px; border-radius: 10px; color: white; font-size: 1.1rem; margin-bottom: 20px; }
         .row-btn { display: flex; justify-content: space-between; align-items: center; background: var(--surface-light); padding: 12px; border-radius: 10px; margin-bottom: 10px; }
         
-        .color-dot-select { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; transition: transform 0.2s; position: relative; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+        /* Updated Color Picker UI (State Based) */
+        .color-dot-select { 
+            width: 40px; height: 40px; border-radius: 50%; border: 3px solid transparent; 
+            transition: transform 0.2s; position: relative; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
         .color-dot-select.selected { border-color: white; transform: scale(1.1); }
-        .color-delete-btn { position: absolute; top: -5px; right: -5px; width: 16px; height: 16px; background: red; color: white; border-radius: 50%; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        /* Add Button */
         .add-color-btn { border: 2px dashed gray; font-size: 1.5rem; color: gray; position: relative; overflow: hidden; }
         #custom-color-picker { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 
@@ -146,15 +163,30 @@
         .ai-btn-group { display: flex; gap: 10px; margin-top: 10px; }
         .btn-ai-action { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; }
 
+        /* Clock Picker (Hour & Minute Styles) */
         .clock-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .clock-overlay.open { opacity: 1; pointer-events: auto; }
         .clock-face { width: 280px; height: 280px; background: var(--surface-light); border-radius: 50%; position: relative; margin: 20px; touch-action: none; }
-        .clock-num { position: absolute; width: 40px; height: 40px; text-align: center; line-height: 40px; color: white; transform: translate(-50%, -50%); border-radius: 50%; transition: background 0.1s ease; }
+        
+        .clock-num { 
+            position: absolute; width: 40px; height: 40px; text-align: center; line-height: 40px; 
+            color: white; transform: translate(-50%, -50%); border-radius: 50%; 
+            transition: background 0.1s ease;
+        }
         .clock-num.active { background-color: var(--accent-color); font-weight: bold; color: white; }
+        
+        /* Minute Ticks */
+        .clock-tick {
+            position: absolute; width: 2px; height: 6px; background: rgba(255,255,255,0.2);
+            top: 50%; left: 50%; transform-origin: center;
+        }
+        
         .clock-hand { position: absolute; top: 50%; left: 50%; width: 2px; height: 110px; background: var(--accent-color); transform-origin: bottom center; transform: translate(-50%, -100%) rotate(0deg); }
         .clock-center-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5rem; font-weight: bold; color: var(--accent-color); opacity: 0.8; z-index: 0; }
         .btn-done { color: var(--accent-color); font-weight: 600; font-size: 1.1rem; }
         .btn-cancel { color: var(--danger-color); font-size: 1.1rem; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -163,75 +195,85 @@
 
     <div id="app">
         <header>
-            <div class="nav-btn" id="nav-left">‹</div>
-            <div class="nav-title" id="nav-title">Calendar</div>
-            <div class="nav-btn" id="nav-right">›</div>
+            <div class="nav-btn clickable" id="nav-left">☰</div>
+            <div class="nav-title clickable" id="nav-title">2025</div>
+            <div class="nav-btn clickable" id="nav-right">›</div>
         </header>
 
         <div id="view-container" class="view-container"></div>
 
         <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
         <div class="sidebar" id="sidebar">
-            <div class="settings-page" id="settings-root">
-                <div class="setting-header" data-t="settings">Settings</div>
-                <div class="list-item" onclick="Settings.nav('todo')"><span data-t="todo">To-Do List</span> <span>›</span></div>
-                <div class="list-item" onclick="Settings.nav('lang')"><span data-t="lang">Language</span> <span>›</span></div>
-                <div class="list-item" onclick="Settings.nav('sound')"><span data-t="ringtone">Ringtone</span> <span>›</span></div>
-            </div>
             
-            <div class="settings-page sub-page" id="settings-todo" style="overflow-y:auto;">
-                <div class="nav-btn" onclick="Settings.back()" style="display:block; margin-bottom:20px;">← <span data-t="back">Back</span></div>
+            <div class="settings-view active" id="sidebar-home">
+                <div class="setting-header" style="margin-top:20px;">Menu</div>
+                <div class="list-item clickable" onclick="Settings.nav('todo')">
+                    <div style="display:flex; align-items:center; gap:10px;"><span>📋</span><span data-t="todo">To-Do List</span></div><span>›</span>
+                </div>
+                <div class="list-item clickable" onclick="Settings.nav('settings-menu')">
+                    <div style="display:flex; align-items:center; gap:10px;"><span>⚙️</span><span data-t="settings">Settings</span></div><span>›</span>
+                </div>
+            </div>
+
+            <div class="settings-view" id="sidebar-settings-menu" style="transform: translateX(100%);">
+                <div class="back-link clickable" onclick="Settings.back('home')">← <span data-t="back">Back</span></div>
+                <div class="setting-header" data-t="settings">Settings</div>
+                <div class="list-item clickable" onclick="Settings.nav('lang')"><span data-t="lang">Language</span> <span>›</span></div>
+                <div class="list-item clickable" onclick="Settings.nav('sound')"><span data-t="ringtone">Ringtone</span> <span>›</span></div>
+            </div>
+
+            <div class="settings-view" id="sidebar-todo" style="transform: translateX(100%); z-index: 505;">
+                <div class="back-link clickable" onclick="Settings.back('home')">← <span data-t="back">Back</span></div>
                 <div class="setting-header" data-t="todo">To-Do List</div>
-                <div id="todo-container" style="padding-bottom:40px;"></div>
+                <div id="todo-container" style="padding-bottom:60px;"></div>
             </div>
 
-            <div class="settings-page sub-page" id="settings-lang">
-                <div class="nav-btn" onclick="Settings.back()" style="display:block; margin-bottom:20px;">← <span data-t="back">Back</span></div>
+            <div class="settings-view" id="sidebar-lang" style="transform: translateX(100%);">
+                <div class="back-link clickable" onclick="Settings.back('settings-menu')">← <span data-t="back">Back</span></div>
                 <div class="setting-header" data-t="lang">Language</div>
-                <div class="list-item" id="opt-lang-en" onclick="Settings.setLang('en')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>English</span></div></div>
-                <div class="list-item" id="opt-lang-zh" onclick="Settings.setLang('zh')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>繁體中文</span></div></div>
+                <div class="list-item clickable" id="opt-lang-en" onclick="Settings.setLang('en')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>English</span></div></div>
+                <div class="list-item clickable" id="opt-lang-zh" onclick="Settings.setLang('zh')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>繁體中文</span></div></div>
             </div>
 
-            <div class="settings-page sub-page" id="settings-sound">
-                <div class="nav-btn" onclick="Settings.back()" style="display:block; margin-bottom:20px;">← <span data-t="back">Back</span></div>
+            <div class="settings-view" id="sidebar-sound" style="transform: translateX(100%);">
+                <div class="back-link clickable" onclick="Settings.back('settings-menu')">← <span data-t="back">Back</span></div>
                 <div class="setting-header" data-t="ringtone">Ringtone</div>
-                <div style="padding:15px; color:gray; font-size:0.8rem; line-height:1.4;">Web Apps cannot access iPhone system ringtones. Using high-quality synth tones.</div>
                 <div style="padding: 20px 0;"><label class="form-label">Volume</label><input type="range" id="vol-slider" min="0" max="1" step="0.1" style="width:100%"></div>
-                <div class="list-item" id="opt-tone-Beep" onclick="Settings.setTone('Beep')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>Beep (Default)</span></div></div>
-                <div class="list-item" id="opt-tone-Chime" onclick="Settings.setTone('Chime')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>Chime</span></div></div>
-                <div class="list-item" onclick="document.getElementById('file-upload').click()"><div style="display:flex; align-items:center;"><span class="check-icon"></span><span>Upload Custom (MP3)</span></div><span style="font-size:1.5rem">+</span></div>
+                <div class="list-item clickable" id="opt-tone-Beep" onclick="Settings.setTone('Beep')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>Beep</span></div></div>
+                <div class="list-item clickable" id="opt-tone-Chime" onclick="Settings.setTone('Chime')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>Chime</span></div></div>
+                <div class="list-item clickable" onclick="document.getElementById('file-upload').click()"><div style="display:flex; align-items:center;"><span class="check-icon"></span><span>Upload Custom</span></div><span>+</span></div>
                 <input type="file" id="file-upload" accept="audio/*" style="display:none" onchange="Settings.uploadTone(this)">
             </div>
         </div>
 
         <div class="modal" id="event-modal">
             <div class="modal-header">
-                <span class="nav-btn" onclick="Modal.close()" data-t="cancel" style="font-size:1rem; color:var(--danger-color)">Cancel</span>
+                <span class="nav-btn clickable" onclick="Modal.close()" data-t="cancel" style="font-size:1rem; color:var(--danger-color)">Cancel</span>
                 <span style="font-weight:600" id="modal-title" data-t="event">Event</span>
-                <span class="nav-btn" onclick="Modal.save()" id="modal-save-btn" data-t="done" style="font-size:1rem;">Done</span>
+                <span class="nav-btn clickable" onclick="Modal.save()" id="modal-save-btn" data-t="done" style="font-size:1rem;">Done</span>
             </div>
             <div class="modal-body">
                 <input type="text" id="evt-title" class="form-input" placeholder="Title">
-                <div class="row-btn" onclick="ClockPicker.open('start')"><span data-t="startTime">Start</span><span id="display-start">12:00</span></div>
-                <div class="row-btn" onclick="ClockPicker.open('end')"><span data-t="endTime">End</span><span id="display-end">13:00</span></div>
+                <div class="row-btn clickable" onclick="ClockPicker.open('start')"><span data-t="startTime">Start</span><span id="display-start">12:00</span></div>
+                <div class="row-btn clickable" onclick="ClockPicker.open('end')"><span data-t="endTime">End</span><span id="display-end">13:00</span></div>
                 <div class="row-btn"><span data-t="repeat">Repeat</span><input type="checkbox" id="evt-repeat" style="transform:scale(1.5)"></div>
                 <div class="row-btn hidden" id="repeat-end-row"><span data-t="endDate">End Date</span><input type="date" id="evt-repeat-end" style="background:transparent; border:none; color:white;"></div>
-                <div style="margin:20px 0;"><label class="form-label" data-t="color">Color (Tap to select, Tap again to delete)</label><div id="color-list" style="display:flex; gap:15px; overflow-x:auto; padding:10px 5px; align-items:center;"></div></div>
+                <div style="margin:20px 0;"><label class="form-label" data-t="color">Color</label><div id="color-list" style="display:flex; gap:15px; overflow-x:auto; padding:10px 5px; align-items:center;"></div></div>
                 <textarea id="evt-desc" class="form-input" rows="3" placeholder="Notes"></textarea>
-                <div class="ai-fab" onclick="AIChat.open()">✨</div>
+                <div class="ai-fab clickable" onclick="AIChat.open()">✨</div>
             </div>
         </div>
 
         <div class="ai-chat-view" id="ai-chat-view">
             <header style="position:relative; background:none; border-bottom:1px solid rgba(255,255,255,0.1);"><span style="font-weight:bold; margin-left:20px;">Gemini Assistant</span><span style="color:var(--accent-color); margin-right:20px; cursor:pointer;" onclick="AIChat.close()">Close</span></header>
             <div class="chat-area" id="chat-messages"></div>
-            <div style="padding:15px; display:flex; gap:10px; background:var(--surface-color); padding-bottom:calc(var(--safe-bottom)+15px);"><input type="text" id="ai-msg-input" class="form-input" style="margin:0; flex:1;" placeholder="Ask for time..."><button onclick="AIChat.send()" style="width:50px; background:var(--ai-color); border:none; border-radius:10px; color:white;">↑</button></div>
+            <div style="padding:15px; display:flex; gap:10px; background:var(--surface-color); padding-bottom:calc(var(--safe-bottom)+15px);"><input type="text" id="ai-msg-input" class="form-input" style="margin:0; flex:1;" placeholder="Ask for time..."><button onclick="AIChat.send()" class="clickable" style="width:50px; background:var(--ai-color); border:none; border-radius:10px; color:white;">↑</button></div>
         </div>
 
         <div class="clock-overlay" id="clock-picker">
             <h2 id="clock-title" style="color:white; margin-bottom:20px;">Time</h2>
             <div class="clock-face" id="clock-face"><div class="clock-center-display" id="clock-center-display"></div><div class="clock-hand" id="clock-hand"></div></div>
-            <div style="margin-top:30px; display:flex; gap:20px;"><button onclick="ClockPicker.close()" style="background:none; border:none; color:var(--danger-color); font-size:1.1rem;">Cancel</button><button onclick="ClockPicker.next()" style="background:var(--accent-color); color:white; padding:10px 30px; border-radius:20px; border:none; font-size:1.1rem;">Next</button></div>
+            <div style="margin-top:30px; display:flex; gap:20px;"><button class="clickable" onclick="ClockPicker.close()" style="background:none; border:none; color:var(--danger-color); font-size:1.1rem;">Cancel</button><button class="clickable" onclick="ClockPicker.next()" style="background:var(--accent-color); color:white; padding:10px 30px; border-radius:20px; border:none; font-size:1.1rem;">Next</button></div>
         </div>
     </div>
 
@@ -310,14 +352,12 @@
             bindGlobal() {
                 document.getElementById('nav-left').onclick = () => this.nav('left');
                 document.getElementById('nav-right').onclick = () => this.nav('next');
-                document.getElementById('nav-title').onclick = () => this.nav('up'); // Tap Title to go up
+                document.getElementById('nav-title').onclick = () => this.nav('up');
                 document.getElementById('sidebar-backdrop').onclick = () => Settings.close();
                 document.getElementById('evt-repeat').onchange = (e) => { document.getElementById('repeat-end-row').classList.toggle('hidden', !e.target.checked); };
                 
-                // Color Picker - Add Btn Logic
+                // Color Picker Logic
                 const addBtn = document.querySelector('.add-color-btn');
-                // No need for explicit binding, handled in HTML via inner input logic
-                
                 let startX = 0;
                 document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
                 document.addEventListener('touchmove', e => { if(this.view === 'month' && startX < 30 && e.touches[0].clientX - startX > 50) Settings.open(); });
@@ -353,28 +393,36 @@
             render() {
                 const container = document.getElementById('view-container'); container.innerHTML = '';
                 const titleEl = document.getElementById('nav-title');
+                const leftEl = document.getElementById('nav-left');
                 const lang = Store.data.settings.lang || 'zh';
                 
                 if(this.view === 'month') { 
-                    titleEl.innerText = this.date.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', { year: 'numeric', month: 'long' }); 
+                    titleEl.innerText = this.date.getFullYear();
+                    leftEl.innerText = '☰';
                     this.renderMonth(container); 
                 }
                 else if (this.view === 'week') { 
-                    titleEl.innerText = this.date.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', { year: 'numeric', month: 'long' }); // Week shows month/year 
+                    titleEl.innerText = this.date.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', { month: 'long' }); 
+                    leftEl.innerText = '‹';
                     this.renderWeek(container); 
                 }
                 else { 
-                    titleEl.innerText = this.date.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', { year: 'numeric', month: 'short', day: 'numeric' }); // Day shows Date
+                    titleEl.innerText = this.date.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', { month: 'long' }); 
+                    leftEl.innerText = '‹';
                     this.renderDay(container); 
                 }
             },
             renderMonth(container) {
+                const mTitle = document.createElement('div'); mTitle.className = 'month-large-title';
+                mTitle.innerText = this.date.toLocaleDateString(Store.data.settings.lang === 'en' ? 'en-US' : 'zh-TW', { month: 'long' });
+                container.appendChild(mTitle);
+
                 const grid = document.createElement('div'); grid.className = 'calendar-grid';
                 const daysHeader = document.createElement('div'); daysHeader.className = 'weekday-row'; ['S','M','T','W','T','F','S'].forEach(d => daysHeader.innerHTML += `<div>${d}</div>`); container.appendChild(daysHeader);
                 const y = this.date.getFullYear(), m = this.date.getMonth(); const first = new Date(y, m, 1).getDay(); const total = new Date(y, m+1, 0).getDate();
                 for(let i=0; i<first; i++) grid.appendChild(document.createElement('div'));
                 for(let i=1; i<=total; i++) {
-                    const el = document.createElement('div'); el.className = 'day-cell'; if(i === new Date().getDate() && m === new Date().getMonth()) el.classList.add('today');
+                    const el = document.createElement('div'); el.className = 'day-cell clickable'; if(i === new Date().getDate() && m === new Date().getMonth()) el.classList.add('today');
                     el.innerHTML = `<div class="day-num">${i}</div><div class="dots"></div>`;
                     Store.getEvents(new Date(y, m, i)).slice(0,3).forEach(e => { if(!e.completed) { const d = document.createElement('div'); d.className='dot'; d.style.background = e.color; el.querySelector('.dots').appendChild(d); } });
                     el.onclick = () => this.setView('week', new Date(y, m, i)); grid.appendChild(el);
@@ -385,7 +433,7 @@
                 const wrapper = document.createElement('div'); wrapper.className = 'week-view-container';
                 const header = document.createElement('div'); header.className = 'week-header-row'; header.innerHTML = '<div></div>';
                 const start = new Date(this.date); start.setDate(start.getDate() - start.getDay()); const daysMap = ['S','M','T','W','T','F','S'];
-                for(let i=0; i<7; i++) { const d = new Date(start); d.setDate(d.getDate() + i); header.innerHTML += `<div style="display:flex; flex-direction:column; align-items:center; ${d.toDateString()===new Date().toDateString()?'color:var(--danger-color);':''}"><span>${daysMap[i]}</span><span style="font-size:1.1rem; font-weight:bold">${d.getDate()}</span></div>`; }
+                for(let i=0; i<7; i++) { const d = new Date(start); d.setDate(d.getDate() + i); header.innerHTML += `<div class="clickable" onclick="App.setView('day', new Date('${d}'))" style="display:flex; flex-direction:column; align-items:center; ${d.toDateString()===new Date().toDateString()?'color:var(--danger-color);':''}"><span>${daysMap[i]}</span><span style="font-size:1.1rem; font-weight:bold">${d.getDate()}</span></div>`; }
                 wrapper.appendChild(header);
                 const body = document.createElement('div'); body.className = 'week-body';
                 const timeCol = document.createElement('div'); timeCol.className = 'week-time-col'; for(let i=0; i<=24; i+=3) timeCol.innerHTML += `<div class="week-time-label" style="top:${(i/24)*100}%">${i}:00</div>`; body.appendChild(timeCol);
@@ -405,7 +453,7 @@
             renderDay(container) {
                 const strip = document.createElement('div'); strip.className = 'week-strip';
                 const start = new Date(this.date); start.setDate(start.getDate() - start.getDay()); const daysMap = ['S','M','T','W','T','F','S'];
-                for(let i=0; i<7; i++) { const d = new Date(start); d.setDate(d.getDate() + i); const el = document.createElement('div'); el.className = `strip-day ${d.getDate() === this.date.getDate() ? 'active' : ''}`; el.innerHTML = `<span>${daysMap[i]}</span><span>${d.getDate()}</span>`; el.onclick = () => { this.date = d; this.render(); }; strip.appendChild(el); }
+                for(let i=0; i<7; i++) { const d = new Date(start); d.setDate(d.getDate() + i); const el = document.createElement('div'); el.className = `strip-day clickable ${d.getDate() === this.date.getDate() ? 'active' : ''}`; el.innerHTML = `<span>${daysMap[i]}</span><span>${d.getDate()}</span>`; el.onclick = () => { this.date = d; this.render(); }; strip.appendChild(el); }
                 container.appendChild(strip);
                 const scroll = document.createElement('div'); scroll.id = 'day-scroll'; const timeline = document.createElement('div'); timeline.className = 'timeline-container'; timeline.style.height = (this.zoom * 24) + 'px';
                 for(let i=0; i<24; i++) { const mk = document.createElement('div'); mk.className = 'hour-mark'; mk.style.top = (i * this.zoom) + 'px'; mk.innerText = i + ':00'; timeline.appendChild(mk); }
@@ -414,7 +462,7 @@
                     const end = new Date(s); const realEnd = new Date(e.end); end.setHours(realEnd.getHours(), realEnd.getMinutes());
                     const top = (s.getHours() + s.getMinutes()/60) * this.zoom; const height = Math.max(((end - s) / 3600000) * this.zoom, 30);
                     const el = document.createElement('div'); 
-                    el.className = `event-block ${e.reminder && !e.completed ? 'reminder-on' : ''} ${e.completed ? 'completed' : ''}`; 
+                    el.className = `event-block clickable ${e.reminder && !e.completed ? 'reminder-on' : ''} ${e.completed ? 'completed' : ''}`; 
                     el.style.top = top + 'px'; el.style.height = height + 'px'; el.style.background = e.color;
                     el.innerHTML = `
                         <div class="event-content"><div>${e.title}</div><div style="font-size:0.8rem; opacity:0.8">${Utils.formatTime(s)} - ${Utils.formatTime(end)}</div></div>
@@ -423,18 +471,12 @@
                     let ts = 0; let lpTimer;
                     el.addEventListener('touchstart', ev => { 
                         ts = ev.touches[0].clientX; 
-                        lpTimer = setTimeout(() => { 
-                            e.reminder = !e.reminder; Store.save(); this.render(); 
-                            if(navigator.vibrate) navigator.vibrate(50);
-                        }, 1000); 
+                        lpTimer = setTimeout(() => { e.reminder = !e.reminder; Store.save(); this.render(); if(navigator.vibrate) navigator.vibrate(50); }, 1000); 
                     });
                     el.addEventListener('touchend', ev => { 
                         clearTimeout(lpTimer); 
                         const touch = ev.changedTouches[0];
-                        if (touch) {
-                            const diff = ts - touch.clientX;
-                            if(diff > 60) el.classList.add('swiped'); else if (diff < -60) el.classList.remove('swiped');
-                        }
+                        if (touch) { const diff = ts - touch.clientX; if(diff > 60) el.classList.add('swiped'); else if (diff < -60) el.classList.remove('swiped'); }
                     });
                     el.querySelector('.btn-edit').onclick = (stop) => { stop.stopPropagation(); Modal.open(e.id); };
                     el.querySelector('.btn-delete').onclick = (stop) => { stop.stopPropagation(); Modal.delete(e.id); };
@@ -483,12 +525,25 @@
             renderColors() { 
                 const cList = document.getElementById('color-list'); cList.innerHTML = ''; 
                 Store.data.colors.forEach((c, idx) => { 
-                    const d = document.createElement('div'); d.className = 'color-dot-select'; d.style.background = c; 
-                    d.onclick = (e) => { e.stopPropagation(); if(this.selectedColor === c && idx >= 5) { if(confirm("Delete this color?")) { Store.data.colors.splice(idx, 1); Store.save(); this.selectedColor = Store.data.colors[0]; this.renderColors(); this.updateColorUI(); } } else { this.selectedColor = c; this.updateColorUI(); } }; 
-                    if(this.selectedColor === c) d.innerHTML = idx >= 5 ? `<span class="color-delete-btn">×</span>` : `✓`;
+                    const d = document.createElement('div'); d.className = 'color-dot-select clickable'; d.style.background = c; 
+                    d.onclick = (e) => { e.stopPropagation(); 
+                        if(this.selectedColor === c) { // Second click logic
+                            if(idx >= 5) {
+                                // Deletion mode
+                                if(d.classList.contains('deleting')) {
+                                    Store.data.colors.splice(idx, 1); Store.save(); this.selectedColor = Store.data.colors[0]; this.renderColors(); this.updateColorUI();
+                                } else {
+                                    d.classList.add('deleting'); d.innerHTML = `<span class="color-delete-btn">×</span>`;
+                                }
+                            }
+                        } else { 
+                            this.selectedColor = c; this.updateColorUI(); 
+                        } 
+                    }; 
+                    if(this.selectedColor === c && !d.classList.contains('deleting')) d.innerHTML = `✓`;
                     cList.appendChild(d); 
                 }); 
-                const add = document.createElement('div'); add.className = 'color-dot-select add-color-btn'; add.innerText = '+'; add.innerHTML += `<input type="color" id="custom-color-picker">`;
+                const add = document.createElement('div'); add.className = 'color-dot-select add-color-btn clickable'; add.innerText = '+'; add.innerHTML += `<input type="color" id="custom-color-picker">`;
                 add.querySelector('input').onchange = (e) => { Store.data.colors.push(e.target.value); Store.save(); Modal.renderColors(); Modal.selectedColor = e.target.value; Modal.updateColorUI(); };
                 cList.appendChild(add); 
             },
@@ -502,40 +557,69 @@
             next() { if(this.mode === 'hour') { this.mode = 'minute'; this.renderFace(); } else { Modal.setTime(this.target, this.valH, this.valM); this.close(); } },
             renderFace() {
                 const face = document.getElementById('clock-face'); document.getElementById('clock-title').innerText = this.mode === 'hour' ? 'Select Hour' : 'Select Minute';
-                face.querySelectorAll('.clock-num').forEach(e => e.remove()); const r = 110;
-                for(let i=1; i<=12; i++) {
-                    const num = document.createElement('div'); num.className = 'clock-num'; num.id = 'c'+i;
-                    const val = this.mode === 'hour' ? i : i*5; const show = (this.mode === 'minute' && val===60) ? 0 : val;
-                    const rad = ((i*30)-90) * (Math.PI/180);
-                    num.style.left = (140 + r*Math.cos(rad)) + 'px'; num.style.top = (140 + r*Math.sin(rad)) + 'px'; num.innerText = show; face.appendChild(num);
+                face.querySelectorAll('.clock-num').forEach(e => e.remove()); face.querySelectorAll('.clock-tick').forEach(e => e.remove()); const r = 110;
+                
+                if (this.mode === 'hour') {
+                    for(let i=1; i<=12; i++) {
+                        const num = document.createElement('div'); num.className = 'clock-num'; num.id = 'c'+i;
+                        const val = i; const rad = ((i*30)-90) * (Math.PI/180);
+                        num.style.left = (140 + r*Math.cos(rad)) + 'px'; num.style.top = (140 + r*Math.sin(rad)) + 'px'; num.innerText = val; face.appendChild(num);
+                    }
+                } else {
+                    // Minute View: 60 ticks
+                    for(let i=0; i<60; i++) {
+                        const tick = document.createElement('div'); tick.className = 'clock-tick';
+                        tick.style.transform = `translate(-50%, -50%) rotate(${i*6}deg) translateY(-110px)`;
+                        if(i%5===0) tick.style.height = '10px'; // Major ticks
+                        face.appendChild(tick);
+                    }
                 }
+
                 const handle = (e, isEnd = false) => {
                     e.preventDefault(); const rect = face.getBoundingClientRect();
                     const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
                     const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
-                    
                     const x = clientX - (rect.left+140); const y = clientY - (rect.top+140);
                     let deg = Math.atan2(y, x) * (180/Math.PI) + 90; if(deg<0) deg+=360;
+                    
                     const step = this.mode === 'hour' ? 30 : 6; const snapped = Math.round(deg / step) * step;
                     const hand = document.getElementById('clock-hand');
                     hand.style.transition = isEnd ? 'transform 0.2s cubic-bezier(0.4, 2, 0.55, 0.44)' : 'none';
                     hand.style.transform = `translate(-50%,-100%) rotate(${snapped}deg)`;
+                    
                     let val = this.mode==='hour' ? Math.round(snapped/30)||12 : Math.round(snapped/6)%60;
                     if(this.mode==='hour') this.valH=val; else this.valM=val;
-                    document.querySelectorAll('.clock-num').forEach(e => e.classList.remove('active'));
-                    let anchor = this.mode==='hour' ? val : Math.round(val/5); if(anchor===0) anchor=12;
-                    const t = document.getElementById('c'+anchor); if(t) t.classList.add('active');
+                    
+                    if(this.mode==='hour') {
+                        document.querySelectorAll('.clock-num').forEach(e => e.classList.remove('active'));
+                        let anchor = val; if(anchor===0) anchor=12; const t = document.getElementById('c'+anchor); if(t) t.classList.add('active');
+                    }
+                    
                     document.getElementById('clock-center-display').innerText = this.mode==='hour'?val:Utils.pad(val);
+                    if(isEnd && this.mode === 'hour') setTimeout(() => this.next(), 300); // Auto-Next
                 };
                 face.ontouchmove = (e) => handle(e, false); face.ontouchend = (e) => handle(e, true); face.onmousedown = () => face.onmousemove = (e)=>handle(e,false); face.onmouseup = (e) => { handle(e,true); face.onmousemove=null; };
+                
+                // Init hand position
+                const initVal = this.mode==='hour'?(this.valH||12):this.valM;
+                const initDeg = this.mode==='hour'?(initVal%12)*30 : initVal*6;
+                document.getElementById('clock-hand').style.transform = `translate(-50%,-100%) rotate(${initDeg}deg)`;
+                document.getElementById('clock-center-display').innerText = this.mode==='hour'?initVal:Utils.pad(initVal);
+                if(this.mode==='hour') { let t=document.getElementById('c'+(initVal||12)); if(t) t.classList.add('active'); }
             }
         };
 
         const Settings = {
-            open() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-backdrop').classList.add('open'); this.updateUI(); },
+            open() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-backdrop').classList.add('open'); this.nav('home'); },
             close() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-backdrop').classList.remove('open'); },
-            nav(page) { document.getElementById('settings-'+page).classList.add('active'); if(page==='todo') this.renderTodo(); },
-            back() { document.querySelectorAll('.sub-page').forEach(e => e.classList.remove('active')); },
+            nav(pageId) {
+                document.querySelectorAll('.settings-view').forEach(p => p.classList.remove('active'));
+                if(pageId === 'home') document.getElementById('sidebar-home').classList.add('active');
+                else if(pageId === 'todo') { document.getElementById('sidebar-todo').classList.add('active'); this.renderTodo(); }
+                else if(pageId === 'settings-menu') document.getElementById('sidebar-settings-menu').classList.add('active');
+                else if(pageId === 'lang' || pageId === 'sound') { document.getElementById('sidebar-'+pageId).classList.add('active'); this.updateUI(); }
+            },
+            back(toPageId) { this.nav(toPageId); },
             setLang(l) { Store.data.settings.lang = l; Store.save(); App.updateLang(); App.render(); this.updateUI(); },
             setTone(t) { Store.data.settings.tone = t; Store.save(); Settings.updateUI(); },
             uploadTone(input) { if(input.files[0]) alert("Custom tone uploaded!"); },
@@ -548,27 +632,16 @@
                 const container = document.getElementById('todo-container'); container.innerHTML = '';
                 const todos = Store.data.events.filter(e => e.reminder && !e.completed).sort((a,b) => new Date(a.start) - new Date(b.start));
                 if(todos.length === 0) { container.innerHTML = '<div style="text-align:center;color:gray;margin-top:20px;">No reminders</div>'; return; }
-                
                 todos.forEach(e => {
-                    const el = document.createElement('div'); el.className = 'todo-item';
-                    el.innerHTML = `
-                        <div class="todo-date">${new Date(e.start).toLocaleDateString()}</div>
-                        <div class="todo-title">${e.title}</div>
-                        <div class="todo-time">${Utils.formatTime(new Date(e.start))} - ${Utils.formatTime(new Date(e.end))}</div>
-                        <div class="todo-actions-overlay">
-                            <button class="btn-todo-action" style="background:var(--success-color);" onclick="Settings.completeTodo('${e.id}')">${Utils.t('completed')}</button>
-                            <button class="btn-todo-action" style="background:rgba(255,255,255,0.2);" onclick="this.parentElement.classList.remove('show')">${Utils.t('close')}</button>
-                        </div>
-                    `;
+                    const el = document.createElement('div'); el.className = 'todo-item clickable';
+                    el.innerHTML = `<div class="todo-date">${new Date(e.start).toLocaleDateString()}</div><div class="todo-title">${e.title}</div><div class="todo-time">${Utils.formatTime(new Date(e.start))} - ${Utils.formatTime(new Date(e.end))}</div>
+                    <div class="todo-actions-overlay"><button class="btn-todo-action clickable" style="background:var(--success-color);" onclick="Settings.completeTodo('${e.id}')">${Utils.t('completed')}</button><button class="btn-todo-action clickable" style="background:rgba(255,255,255,0.2);" onclick="event.stopPropagation();this.parentElement.classList.remove('show')">${Utils.t('close')}</button></div>`;
                     el.style.borderLeft = `5px solid ${e.color}`;
                     el.onclick = () => el.querySelector('.todo-actions-overlay').classList.add('show');
                     container.appendChild(el);
                 });
             },
-            completeTodo(id) {
-                const e = Store.data.events.find(x => x.id === id);
-                if(e) { e.completed = true; e.reminder = false; Store.save(); this.renderTodo(); App.render(); }
-            }
+            completeTodo(id) { const e = Store.data.events.find(x => x.id === id); if(e) { e.completed = true; e.reminder = false; Store.save(); this.renderTodo(); App.render(); } }
         };
 
         const AIChat = { /* Same logic */
@@ -584,17 +657,14 @@
                     const res = await model.generateContent(`Find free slot for: "${text}". Schedule: ${weekEvents}. Return JSON: { "reply": "...", "slot": { "dayOffset": 0, "h": 14, "m": 0 } }`);
                     const json = JSON.parse(res.response.text().match(/\{.*\}/s)[0]);
                     const card = document.createElement('div'); card.className = 'ai-action-card';
-                    card.innerHTML = `<div class="ai-card-title">Suggestion</div><div>${json.reply}</div><div class="ai-btn-group"><button class="btn-ai-action" style="background:var(--ai-color);color:white;" id="confirm-ai">Use This Time</button></div>`;
+                    card.innerHTML = `<div class="ai-card-title">Suggestion</div><div>${json.reply}</div><div class="ai-btn-group"><button class="btn-ai-action clickable" style="background:var(--ai-color);color:white;" id="confirm-ai">Use This Time</button></div>`;
                     document.getElementById('chat-messages').appendChild(card);
-                    card.querySelector('#confirm-ai').onclick = () => {
-                        const d = new Date(App.date); d.setDate(d.getDate() + json.slot.dayOffset);
-                        App.date = d; App.render(); Modal.setTime('start', json.slot.h, json.slot.m); Modal.setTime('end', json.slot.h+1, json.slot.m); this.close();
-                    };
+                    card.querySelector('#confirm-ai').onclick = () => { const d = new Date(App.date); d.setDate(d.getDate() + json.slot.dayOffset); App.date = d; App.render(); Modal.setTime('start', json.slot.h, json.slot.m); Modal.setTime('end', json.slot.h+1, json.slot.m); this.close(); };
                 } catch(e) { document.getElementById('chat-messages').innerHTML += `<div class="msg-bubble msg-ai">Sorry, error: ${e.message}</div>`; }
             }
         };
 
-        window.Settings = Settings; window.Modal = Modal; window.ClockPicker = ClockPicker; window.AIChat = AIChat;
+        window.Settings = Settings; window.Modal = Modal; window.ClockPicker = ClockPicker; window.AIChat = AIChat; window.App = App;
         App.init();
     </script>
 </body>
