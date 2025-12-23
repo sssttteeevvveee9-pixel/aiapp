@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <title>Deep Dark Calendar 24H Fit</title>
+    <title>Deep Dark Calendar</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -25,9 +25,24 @@
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, sans-serif;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-        body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; overscroll-behavior: none; position: fixed; }
-        input, textarea { font-family: inherit; user-select: text; -webkit-user-select: text; }
+        /* ★ 核心修正：全域禁止長按選取與系統選單 ★ */
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none; 
+            -webkit-user-select: none; /* 禁止選取文字 */
+            -webkit-touch-callout: none; /* 禁止長按跳出系統選單/放大鏡 */
+        }
+        
+        body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; }
+        
+        /* 例外：輸入框允許選字 */
+        input, textarea { 
+            font-family: inherit; 
+            user-select: text; 
+            -webkit-user-select: text; 
+        }
+        
         .hidden { display: none !important; }
 
         /* Error Banner */
@@ -55,90 +70,37 @@
         .view-container { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             padding-top: calc(var(--header-height) + var(--safe-top));
-            background: var(--bg-color); 
-            overflow: hidden; 
-            display: flex; flex-direction: column;
-            touch-action: none; /* 禁止預設手勢 */
+            background: var(--bg-color); overflow: hidden; display: flex; flex-direction: column;
         }
 
         /* Calendar Styles */
         .month-large-title { 
             font-size: 2.2rem; font-weight: 800; color: white; padding: 10px 0 5px 0; 
             text-align: center; opacity: 0; animation: fadeIn 0.4s forwards;
-            flex-shrink: 0;
         }
-        
-        .calendar-grid { 
-            display: grid; grid-template-columns: repeat(7, 1fr); padding: 5px 10px 20px 10px; 
-            flex: 1; height: 100%; align-content: stretch;
-        }
-        
-        .weekday-row { 
-            display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; 
-            color: var(--text-secondary); font-size: 0.8rem; padding: 10px 10px 5px; 
-            flex-shrink: 0;
-        }
-        
-        .day-cell { 
-            display: flex; flex-direction: column; align-items: center; border-radius: 8px; position: relative; 
-            border-top: 0.5px solid rgba(255,255,255,0.05); background: transparent; 
-            height: auto; min-height: 0;
-        }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 10px; flex: 1; align-content: start; }
+        .weekday-row { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--text-secondary); font-size: 0.8rem; padding: 10px 10px 5px; }
+        .day-cell { height: 11vh; display: flex; flex-direction: column; align-items: center; border-radius: 12px; position: relative; border-top: 0.5px solid rgba(255,255,255,0.05); background: transparent; }
         .day-cell.today .day-num { background: transparent; color: var(--danger-color); font-weight: 900; font-size: 1.1rem; text-shadow: 0 0 10px rgba(255, 69, 58, 0.3); }
         .day-num { margin-top: 6px; font-size: 1rem; font-weight: 500; }
         .dots { display: flex; gap: 3px; margin-top: 4px; }
         .dot { width: 5px; height: 5px; border-radius: 50%; }
 
-        /* Week View - 24H Full Fit (No Scroll) */
-        .week-view-container { display: flex; height: 100%; width: 100%; flex-direction: column; overflow: hidden; }
-        
-        .week-header-row { 
-            display: grid; grid-template-columns: 40px repeat(7, 1fr); 
-            text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); 
-            padding-bottom: 5px; flex-shrink: 0; background: var(--bg-color); z-index: 10; 
-        }
-        
-        /* 關鍵修改：Week Body 禁止捲動，Flex 1 撐滿 */
-        .week-body { 
-            flex: 1; display: flex; position: relative; 
-            overflow: hidden; /* 禁止滑動 */
-            height: 100%;
-        }
-        
-        /* 關鍵修改：Time Col 高度 100%，自動壓縮 24 小時到一頁 */
-        .week-time-col { 
-            width: 40px; 
-            height: 100%; /* 強制適應高度 */
-            border-right: 1px solid rgba(255,255,255,0.1); 
-            display: flex; flex-direction: column; 
-            /* justify-content: space-between; 不需要，改用 absolute 定位會更準 */
-            position: relative;
-        }
-        
-        /* 時間標籤縮小一點，避免太擠 */
-        .week-time-label { 
-            position: absolute; width: 100%;
-            font-size: 0.55rem; color: var(--text-secondary); 
-            text-align: right; padding-right: 5px; 
-            transform: translateY(-50%); 
-        }
-
-        /* 關鍵修改：Grid Col 高度 100% */
-        .week-grid-col { 
-            flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); 
-            height: 100%; /* 強制適應高度 */
-            position: relative; 
-        }
-        
+        /* Week & Day Views */
+        .week-view-container { display: flex; height: 100%; width: 100%; flex-direction: column; }
+        .week-header-row { display: grid; grid-template-columns: 40px repeat(7, 1fr); text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+        .week-body { flex: 1; display: flex; position: relative; overflow: hidden; }
+        .week-time-col { width: 40px; height: 100%; border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: space-between; padding-top: 10px; padding-bottom: 10px; }
+        .week-time-label { font-size: 0.6rem; color: var(--text-secondary); text-align: right; padding-right: 5px; transform: translateY(-50%); height: 0; }
+        .week-grid-col { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); height: 100%; position: relative; }
         .week-day-column { border-right: 1px solid rgba(255,255,255,0.05); height: 100%; position: relative; }
         .week-event-block { position: absolute; left: 2px; right: 2px; border-radius: 4px; opacity: 0.8; min-height: 2px; }
 
-        /* Day View */
-        .week-strip { display: flex; justify-content: space-around; padding: 10px 0; background: var(--bg-color); border-bottom: 0.5px solid rgba(255,255,255,0.1); z-index: 10; position: relative; flex-shrink: 0; }
+        .week-strip { display: flex; justify-content: space-around; padding: 10px 0; background: var(--bg-color); border-bottom: 0.5px solid rgba(255,255,255,0.1); z-index: 10; position: relative; }
         .strip-day { display: flex; flex-direction: column; align-items: center; padding: 5px 10px; border-radius: 12px; font-size: 0.8rem; color: var(--text-secondary); }
         .strip-day.active { background: var(--surface-color); color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
         
-        #day-scroll { overflow-y: auto; overflow-x: hidden; height: 100%; position: relative; -webkit-overflow-scrolling: touch; touch-action: pan-y; width: 100vw; flex: 1; }
+        #day-scroll { overflow-y: auto; overflow-x: hidden; height: calc(100% - 60px); position: relative; -webkit-overflow-scrolling: touch; touch-action: pan-y; width: 100vw; }
         .timeline-container { position: relative; width: 100%; height: 1440px; transition: height 0.1s linear; }
         .hour-mark { position: absolute; left: 10px; width: 100%; color: var(--text-secondary); font-size: 0.8rem; border-top: 0.5px solid rgba(255,255,255,0.1); }
         
@@ -150,8 +112,13 @@
             touch-action: pan-x;
         }
         .event-block.reminder-on { border: 2px solid var(--reminder-border); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
-        .event-block.reminder-on::after { content: '🔔'; position: absolute; top: 2px; right: 4px; font-size: 0.8rem; filter: grayscale(1) brightness(2); }
+        /* Bell Icon on Top Right */
+        .event-block.reminder-on::after {
+            content: '🔔'; position: absolute; top: 2px; right: 4px; font-size: 0.8rem;
+            filter: grayscale(1) brightness(2);
+        }
         .event-block.completed { background: rgba(0,0,0,0.6) !important; border: 1px solid rgba(255,255,255,0.1); opacity: 0.6; color: #888; text-decoration: line-through; }
+        
         .event-actions { position: absolute; right: 10px; top: 0; bottom: 0; display: flex; align-items: center; gap: 10px; transform: translateX(150%); transition: transform 0.3s ease; }
         .event-block.swiped .event-content { transform: translateX(-120px); }
         .event-block.swiped .event-actions { transform: translateX(0); }
@@ -228,10 +195,20 @@
         .clock-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .clock-overlay.open { opacity: 1; pointer-events: auto; }
         .clock-face { width: 280px; height: 280px; background: var(--surface-light); border-radius: 50%; position: relative; margin: 20px; touch-action: none; }
-        .clock-num { position: absolute; width: 40px; height: 40px; text-align: center; line-height: 40px; color: white; transform: translate(-50%, -50%); border-radius: 50%; transition: background 0.1s ease; }
+        
+        .clock-num { 
+            position: absolute; width: 40px; height: 40px; text-align: center; line-height: 40px; 
+            color: white; transform: translate(-50%, -50%); border-radius: 50%; 
+            transition: background 0.1s ease;
+        }
         .clock-num.active { background-color: var(--accent-color); font-weight: bold; color: white; }
-        .clock-tick { position: absolute; width: 2px; height: 6px; background: rgba(255,255,255,0.2); top: 50%; left: 50%; transform-origin: center; }
+        
+        .clock-tick {
+            position: absolute; width: 2px; height: 6px; background: rgba(255,255,255,0.2);
+            top: 50%; left: 50%; transform-origin: center;
+        }
         .clock-tick.major { height: 10px; background: rgba(255,255,255,0.6); width: 3px; }
+        
         .clock-hand { position: absolute; top: 50%; left: 50%; width: 2px; height: 110px; background: var(--accent-color); transform-origin: bottom center; transform: translate(-50%, -100%) rotate(0deg); }
         .clock-center-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5rem; font-weight: bold; color: var(--accent-color); opacity: 0.8; z-index: 0; }
         .btn-done { color: var(--accent-color); font-weight: 600; font-size: 1.1rem; }
@@ -289,7 +266,7 @@
                 <div style="padding: 20px 0;"><label class="form-label">Volume</label><input type="range" id="vol-slider" min="0" max="1" step="0.1" style="width:100%"></div>
                 <div class="list-item clickable" id="opt-tone-Beep" onclick="Settings.setTone('Beep')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>Beep</span></div></div>
                 <div class="list-item clickable" id="opt-tone-Chime" onclick="Settings.setTone('Chime')"><div style="display:flex; align-items:center;"><span class="check-icon">✓</span><span>Chime</span></div></div>
-                <div class="list-item clickable" onclick="document.getElementById('file-upload').click()"><div style="display:flex; align-items:center;"><span class="check-icon"></span><span>Upload Custom (MP3/M4A/WAV)</span></div><span>+</span></div>
+                <div class="list-item clickable" onclick="document.getElementById('file-upload').click()"><div style="display:flex; align-items:center;"><span class="check-icon"></span><span>Upload Custom</span></div><span>+</span></div>
                 <input type="file" id="file-upload" accept="audio/*" style="display:none" onchange="Settings.uploadTone(this)">
             </div>
         </div>
@@ -327,8 +304,17 @@
     </div>
 
     <script>
-        window.oncontextmenu = function(event) { event.preventDefault(); event.stopPropagation(); return false; };
-        window.onerror = function(msg, url, line) { if(msg.includes('JSON') || msg.includes('null')) { localStorage.removeItem('dark-cal-db'); location.reload(); } };
+        // ★ 禁止右鍵選單 (阻擋長按出現選單)
+        window.oncontextmenu = function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+        };
+
+        window.onerror = function(msg, url, line) {
+            const banner = document.getElementById('error-banner'); banner.style.display = 'block'; banner.innerText = "Error: " + msg;
+            if(msg.includes('JSON') || msg.includes('null')) { localStorage.removeItem('dark-cal-db'); location.reload(); }
+        };
     </script>
 
     <script type="module">
@@ -343,7 +329,7 @@
         };
 
         const Store = {
-            data: { events: [], settings: { lang: 'zh', tone: 'Beep', vol: 0.8, customTone: null }, colors: ['#0a84ff', '#ff3b30', '#30d158', '#bf5af2', '#ff9f0a'] },
+            data: { events: [], settings: { lang: 'zh', tone: 'Beep', vol: 0.8 }, colors: ['#0a84ff', '#ff3b30', '#30d158', '#bf5af2', '#ff9f0a'] },
             init() {
                 try {
                     const d = localStorage.getItem('dark-cal-db');
@@ -351,7 +337,7 @@
                         const parsed = JSON.parse(d);
                         this.data = {
                             events: parsed.events || [],
-                            settings: { lang: (parsed.settings&&parsed.settings.lang)||'zh', tone: (parsed.settings&&parsed.settings.tone)||'Beep', vol: (parsed.settings&&parsed.settings.vol)||0.8, customTone: parsed.settings?.customTone },
+                            settings: { lang: (parsed.settings&&parsed.settings.lang)||'zh', tone: (parsed.settings&&parsed.settings.tone)||'Beep', vol: (parsed.settings&&parsed.settings.vol)||0.8 },
                             colors: parsed.colors || ['#0a84ff', '#ff3b30', '#30d158', '#bf5af2', '#ff9f0a']
                         };
                     }
@@ -378,12 +364,6 @@
             formatTime(d) { return `${this.pad(d.getHours())}:${this.pad(d.getMinutes())}`; },
             t(key) { return Translations[Store.data.settings.lang || 'zh'][key] || key; },
             playTone() {
-                if(Store.data.settings.customTone) {
-                    const audio = new Audio(Store.data.settings.customTone);
-                    audio.volume = Store.data.settings.vol || 0.8;
-                    audio.play().catch(e => console.log("Play failed", e));
-                    return;
-                }
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator(); const gain = ctx.createGain();
                 const type = Store.data.settings.tone;
@@ -407,6 +387,7 @@
                 document.getElementById('btn-prev').onclick = () => this.moveDate(-1);
                 document.getElementById('btn-next').onclick = () => this.moveDate(1);
                 document.getElementById('nav-title').onclick = () => this.nav('up');
+                
                 document.getElementById('sidebar-backdrop').onclick = () => Settings.close();
                 document.getElementById('evt-repeat').onchange = (e) => { document.getElementById('repeat-end-row').classList.toggle('hidden', !e.target.checked); };
                 
@@ -475,29 +456,19 @@
 
                 const grid = document.createElement('div'); grid.className = 'calendar-grid';
                 const daysHeader = document.createElement('div'); daysHeader.className = 'weekday-row'; ['S','M','T','W','T','F','S'].forEach(d => daysHeader.innerHTML += `<div>${d}</div>`); container.appendChild(daysHeader);
-                
                 const y = this.date.getFullYear(), m = this.date.getMonth(); const first = new Date(y, m, 1).getDay(); const total = new Date(y, m+1, 0).getDate();
-                const today = new Date();
                 
-                for(let i=0; i<first; i++) {
-                    const el = document.createElement('div'); el.className = 'day-cell'; grid.appendChild(el);
-                }
+                const today = new Date(); // Fixed today check
                 
+                for(let i=0; i<first; i++) grid.appendChild(document.createElement('div'));
                 for(let i=1; i<=total; i++) {
                     const el = document.createElement('div'); el.className = 'day-cell clickable'; 
                     if(i === today.getDate() && m === today.getMonth() && y === today.getFullYear()) el.classList.add('today');
+                    
                     el.innerHTML = `<div class="day-num">${i}</div><div class="dots"></div>`;
                     Store.getEvents(new Date(y, m, i)).slice(0,3).forEach(e => { if(!e.completed) { const d = document.createElement('div'); d.className='dot'; d.style.background = e.color; el.querySelector('.dots').appendChild(d); } });
                     el.onclick = () => this.setView('week', new Date(y, m, i)); grid.appendChild(el);
                 }
-                
-                const remaining = 42 - (first + total); 
-                if(remaining > 0 && remaining < 14) {
-                    for(let i=0;i<remaining;i++) {
-                        const el = document.createElement('div'); el.className = 'day-cell'; grid.appendChild(el);
-                    }
-                }
-                
                 container.appendChild(grid);
             },
             renderWeek(container) {
@@ -507,12 +478,7 @@
                 for(let i=0; i<7; i++) { const d = new Date(start); d.setDate(d.getDate() + i); header.innerHTML += `<div class="clickable" onclick="App.setView('day', new Date('${d}'))" style="display:flex; flex-direction:column; align-items:center; ${d.toDateString()===new Date().toDateString()?'color:var(--danger-color);':''}"><span>${daysMap[i]}</span><span style="font-size:1.1rem; font-weight:bold">${d.getDate()}</span></div>`; }
                 wrapper.appendChild(header);
                 const body = document.createElement('div'); body.className = 'week-body';
-                const timeCol = document.createElement('div'); timeCol.className = 'week-time-col'; 
-                // 這裡移除 for 迴圈中間的文字生成，改用絕對定位在 CSS 處理，或減少顯示數量
-                for(let i=0; i<=24; i+=3) {
-                    timeCol.innerHTML += `<div class="week-time-label" style="top:${(i/24)*100}%">${i}:00</div>`;
-                }
-                body.appendChild(timeCol);
+                const timeCol = document.createElement('div'); timeCol.className = 'week-time-col'; for(let i=0; i<=24; i+=3) timeCol.innerHTML += `<div class="week-time-label" style="top:${(i/24)*100}%">${i}:00</div>`; body.appendChild(timeCol);
                 const gridCol = document.createElement('div'); gridCol.className = 'week-grid-col';
                 for(let i=0; i<7; i++) {
                     const d = new Date(start); d.setDate(d.getDate() + i); const dayCol = document.createElement('div'); dayCol.className = 'week-day-column'; dayCol.onclick = () => this.setView('day', d);
@@ -547,6 +513,7 @@
                     let ts = 0; let lpTimer;
                     el.addEventListener('touchstart', ev => { 
                         ts = ev.touches[0].clientX; 
+                        // ★ 修正：長按後只改 Class 不 Render (Scroll Jump Fix)
                         lpTimer = setTimeout(() => { 
                             e.reminder = !e.reminder; Store.save(); 
                             if(e.reminder) el.classList.add('reminder-on'); else el.classList.remove('reminder-on');
@@ -608,25 +575,33 @@
                 Store.data.colors.forEach((c, idx) => { 
                     const d = document.createElement('div'); d.className = 'color-dot-select clickable'; d.style.background = c; 
                     
+                    // Logic: Select -> Show Delete Icon -> Delete
                     d.onclick = (e) => { 
                         e.stopPropagation(); 
                         if (this.selectedColor === c) {
-                            if (idx >= 5) {
+                            if (idx >= 5) { // Only delete custom colors
                                 if (this.deletingIndex === idx) {
                                     Store.data.colors.splice(idx, 1); Store.save(); 
-                                    this.selectedColor = Store.data.colors[0]; this.deletingIndex = -1;
+                                    this.selectedColor = Store.data.colors[0]; 
+                                    this.deletingIndex = -1;
                                     this.renderColors(); this.updateColorUI();
                                 } else {
-                                    this.deletingIndex = idx; this.renderColors(); 
+                                    this.deletingIndex = idx;
+                                    this.renderColors(); // Re-render to show icon
                                 }
                             }
                         } else { 
-                            this.selectedColor = c; this.deletingIndex = -1; this.updateColorUI(); 
+                            this.selectedColor = c; 
+                            this.deletingIndex = -1; // Reset delete mode
+                            this.updateColorUI(); 
                         } 
                     }; 
                     
-                    if (this.deletingIndex === idx) d.innerHTML = `<div class="color-delete-overlay">🗑️</div>`; 
-                    else if (this.selectedColor === c) d.innerHTML = `✓`;
+                    if (this.deletingIndex === idx) {
+                        d.innerHTML = `<div class="color-delete-overlay">🗑️</div>`; // Trash Icon
+                    } else if (this.selectedColor === c) {
+                        d.innerHTML = `✓`;
+                    }
                     cList.appendChild(d); 
                 }); 
                 const add = document.createElement('div'); add.className = 'color-dot-select add-color-btn clickable'; add.innerText = '+'; 
@@ -637,33 +612,98 @@
             updateColorUI() { this.renderColors(); }
         };
 
-        // Helper: AudioBuffer to WAV
-        function audioBufferToWav(buffer) {
-            const length = buffer.length * buffer.numberOfChannels * 2 + 44;
-            const bufferArr = new ArrayBuffer(length);
-            const view = new DataView(bufferArr);
-            const channels = [], sampleRate = buffer.sampleRate;
-            let offset = 0, pos = 0;
-
-            // Header
-            setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157); setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(buffer.numberOfChannels);
-            setUint32(sampleRate); setUint32(sampleRate * 2 * buffer.numberOfChannels); setUint16(buffer.numberOfChannels * 2); setUint16(16); setUint32(0x61746164); setUint32(length - 44);
-
-            for(let i=0; i<buffer.numberOfChannels; i++) channels.push(buffer.getChannelData(i));
-
-            while(pos < buffer.length) {
-                for(let i=0; i<buffer.numberOfChannels; i++) {
-                    let sample = Math.max(-1, Math.min(1, channels[i][pos]));
-                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
-                    view.setInt16(44 + offset, sample, true); offset += 2;
+        const ClockPicker = {
+            mode: 'hour', target: 'start', valH: 0, valM: 0,
+            open(target) { this.target = target; this.mode = 'hour'; this.renderFace(); document.getElementById('clock-picker').classList.add('open'); },
+            close() { document.getElementById('clock-picker').classList.remove('open'); },
+            next() { if(this.mode === 'hour') { this.mode = 'minute'; this.renderFace(); } else { Modal.setTime(this.target, this.valH, this.valM); this.close(); } },
+            renderFace() {
+                const face = document.getElementById('clock-face'); document.getElementById('clock-title').innerText = this.mode === 'hour' ? 'Select Hour' : 'Select Minute';
+                face.querySelectorAll('.clock-num').forEach(e => e.remove()); face.querySelectorAll('.clock-tick').forEach(e => e.remove()); const r = 110;
+                
+                if (this.mode === 'hour') {
+                    for(let i=1; i<=12; i++) {
+                        const num = document.createElement('div'); num.className = 'clock-num'; num.id = 'c'+i;
+                        const val = i; const rad = ((i*30)-90) * (Math.PI/180);
+                        num.style.left = (140 + r*Math.cos(rad)) + 'px'; num.style.top = (140 + r*Math.sin(rad)) + 'px'; num.innerText = val; face.appendChild(num);
+                    }
+                } else {
+                    for(let i=0; i<60; i++) {
+                        const tick = document.createElement('div'); tick.className = `clock-tick ${i%5===0?'major':''}`;
+                        tick.style.transform = `translate(-50%, -50%) rotate(${i*6}deg) translateY(-110px)`;
+                        face.appendChild(tick);
+                    }
                 }
-                pos++;
-            }
-            return bufferArr;
 
-            function setUint16(data) { view.setUint16(offset, data, true); offset += 2; }
-            function setUint32(data) { view.setUint32(offset, data, false); offset += 4; } // Big-endian for RIFF chunks
-        }
+                const handle = (e, isEnd = false) => {
+                    e.preventDefault(); const rect = face.getBoundingClientRect();
+                    // Fix: Use changedTouches if touches is empty (on touchend)
+                    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
+                    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
+                    
+                    const x = clientX - (rect.left+140); const y = clientY - (rect.top+140);
+                    let deg = Math.atan2(y, x) * (180/Math.PI) + 90; if(deg<0) deg+=360;
+                    
+                    const step = this.mode === 'hour' ? 30 : 6; const snapped = Math.round(deg / step) * step;
+                    const hand = document.getElementById('clock-hand');
+                    hand.style.transition = isEnd ? 'transform 0.2s cubic-bezier(0.4, 2, 0.55, 0.44)' : 'none';
+                    hand.style.transform = `translate(-50%,-100%) rotate(${snapped}deg)`;
+                    
+                    let val = this.mode==='hour' ? Math.round(snapped/30)||12 : Math.round(snapped/6)%60;
+                    if(this.mode==='hour') this.valH=val; else this.valM=val;
+                    
+                    if(this.mode==='hour') {
+                        document.querySelectorAll('.clock-num').forEach(e => e.classList.remove('active'));
+                        let anchor = val; if(anchor===0) anchor=12; const t = document.getElementById('c'+anchor); if(t) t.classList.add('active');
+                    }
+                    
+                    document.getElementById('clock-center-display').innerText = this.mode==='hour'?val:Utils.pad(val);
+                    if(isEnd && this.mode === 'hour') setTimeout(() => this.next(), 300); // Auto-Next
+                };
+                face.ontouchmove = (e) => handle(e, false); face.ontouchend = (e) => handle(e, true); face.onmousedown = () => face.onmousemove = (e)=>handle(e,false); face.onmouseup = (e) => { handle(e,true); face.onmousemove=null; };
+                
+                const initVal = this.mode==='hour'?(this.valH||12):this.valM;
+                const initDeg = this.mode==='hour'?(initVal%12)*30 : initVal*6;
+                document.getElementById('clock-hand').style.transform = `translate(-50%,-100%) rotate(${initDeg}deg)`;
+                document.getElementById('clock-center-display').innerText = this.mode==='hour'?initVal:Utils.pad(initVal);
+                if(this.mode==='hour') { let t=document.getElementById('c'+(initVal||12)); if(t) t.classList.add('active'); }
+            }
+        };
+
+        const Settings = {
+            open() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-backdrop').classList.add('open'); this.nav('home'); },
+            close() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-backdrop').classList.remove('open'); },
+            nav(pageId) {
+                document.querySelectorAll('.settings-view').forEach(p => p.classList.remove('active'));
+                if(pageId === 'home') document.getElementById('sidebar-home').classList.add('active');
+                else if(pageId === 'todo') { document.getElementById('sidebar-todo').classList.add('active'); this.renderTodo(); }
+                else if(pageId === 'settings-menu') document.getElementById('sidebar-settings-menu').classList.add('active');
+                else if(pageId === 'lang' || pageId === 'sound') { document.getElementById('sidebar-'+pageId).classList.add('active'); this.updateUI(); }
+            },
+            back(toPageId) { this.nav(toPageId); },
+            setLang(l) { Store.data.settings.lang = l; Store.save(); App.updateLang(); App.render(); this.updateUI(); },
+            setTone(t) { Store.data.settings.tone = t; Store.save(); Settings.updateUI(); },
+            uploadTone(input) { if(input.files[0]) alert("Custom tone uploaded!"); },
+            updateUI() {
+                document.querySelectorAll('.check-icon').forEach(e => e.parentElement.parentElement.classList.remove('checked'));
+                const l = Store.data.settings.lang || 'zh'; const lEl = document.getElementById('opt-lang-'+l); if(lEl) lEl.classList.add('checked');
+                const t = Store.data.settings.tone || 'Beep'; const tEl = document.getElementById('opt-tone-'+t); if(tEl) tEl.classList.add('checked');
+            },
+            renderTodo() {
+                const container = document.getElementById('todo-container'); container.innerHTML = '';
+                const todos = Store.data.events.filter(e => e.reminder && !e.completed).sort((a,b) => new Date(a.start) - new Date(b.start));
+                if(todos.length === 0) { container.innerHTML = '<div style="text-align:center;color:gray;margin-top:20px;">No reminders</div>'; return; }
+                todos.forEach(e => {
+                    const el = document.createElement('div'); el.className = 'todo-item clickable';
+                    el.innerHTML = `<div class="todo-date">${new Date(e.start).toLocaleDateString()}</div><div class="todo-title">${e.title}</div><div class="todo-time">${Utils.formatTime(new Date(e.start))} - ${Utils.formatTime(new Date(e.end))}</div>
+                    <div class="todo-actions-overlay"><button class="btn-todo-action clickable" style="background:var(--success-color);" onclick="Settings.completeTodo('${e.id}')">${Utils.t('completed')}</button><button class="btn-todo-action clickable" style="background:rgba(255,255,255,0.2);" onclick="event.stopPropagation();this.parentElement.classList.remove('show')">${Utils.t('close')}</button></div>`;
+                    el.style.borderLeft = `5px solid ${e.color}`;
+                    el.onclick = () => el.querySelector('.todo-actions-overlay').classList.add('show');
+                    container.appendChild(el);
+                });
+            },
+            completeTodo(id) { const e = Store.data.events.find(x => x.id === id); if(e) { e.completed = true; e.reminder = false; Store.save(); this.renderTodo(); App.render(); } }
+        };
 
         const AIChat = { 
             open() { if(!GoogleGenerativeAI) { alert("AI Loading..."); return; } document.getElementById('ai-chat-view').classList.add('open'); document.getElementById('chat-messages').innerHTML = '<div class="msg-bubble msg-ai">Hi! I can help you find a time slot.</div>'; },
